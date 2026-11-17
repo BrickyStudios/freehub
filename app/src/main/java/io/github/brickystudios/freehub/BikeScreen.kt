@@ -303,12 +303,18 @@ private fun Developer(bike: Bike) {
             Spacer(Modifier.height(10.dp))
             Action(tr("Alle Werte lesen", "Read all values"), Modifier.fillMaxWidth(), primary = false) { if (connected) Di2.readAll() }
             Spacer(Modifier.height(10.dp))
+            BodyText(
+                tr("Vorher den Knopf hinten am Schaltwerk drücken — wie E-TUBE es verlangt. Sonst gibt das Schaltwerk die Einstellungen nicht frei.",
+                   "Press the button on the back of the derailleur first — like E-TUBE asks. Otherwise the derailleur does not release its settings."),
+                color = P.ink, size = 14.sp,
+            )
+            Spacer(Modifier.height(8.dp))
             Action(tr("Schaltwerk-Speicher lesen", "Read derailleur memory"), Modifier.fillMaxWidth(), primary = connected) { if (connected) Di2.readMemory() }
             Spacer(Modifier.height(8.dp))
             BodyText(
                 memory ?: if (connected) tr(
-                    "Experimentell. Meldet sich wie E-TUBE mit dem Passkey an, fragt die Gangnutzung ab und verbindet danach neu. Liest nur, ändert keine Einstellung.",
-                    "Experimental. Logs in like E-TUBE with the passkey, asks for the gear usage and reconnects afterwards. Reads only, changes no setting.",
+                    "Experimentell. Meldet sich wie E-TUBE mit dem Passkey an, öffnet die Sitzung und liest die Einstellungen, die das Schaltwerk daraufhin sendet. Liest nur, ändert nichts.",
+                    "Experimental. Logs in like E-TUBE with the passkey, opens the session and reads the settings the derailleur then sends. Reads only, changes nothing.",
                 ) else tr("Erst verbinden: einmal schalten.", "Connect first: shift once."),
                 color = if (memory != null) P.ink else P.muted, size = 14.sp,
             )
