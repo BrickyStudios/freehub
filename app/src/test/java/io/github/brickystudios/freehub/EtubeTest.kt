@@ -30,9 +30,14 @@ class EtubeTest {
         assertEquals("00 0c 01", Etube.ble(0x0C, 0x01).hex())  // setPCConnectMode(1)
     }
 
-    @Test fun sessionOpenIsProtocolThenPcConnect() {
-        assertEquals("00 03 00", Etube.SESSION_OPEN[0].second.hex())
-        assertEquals("00 0c 01", Etube.SESSION_OPEN[1].second.hex())
+    @Test fun sessionFlowMatchesTheHciSnoop() {
+        val steps = Etube.SESSION_FLOW.map { it.third.hex() }
+        assertEquals("ff 00", steps[0])              // command mode
+        assertEquals("00 05", steps[1])              // 2AFA 00 05
+        assertEquals("00 13 01 1c 00", steps[2])     // id read
+        assertEquals("01", steps[3]); assertEquals("00", steps[4]) // 2AF5 writes
+        assertEquals("00 13 01 2c 00", steps[5])     // firmware read
+        assertEquals("00 03 00", steps[6])           // setProtocolMode → config streams on 2AFD
     }
 
     @Test fun replyDataVsNoData() {
@@ -50,10 +55,10 @@ class EtubeTest {
         assertEquals("00 13 0b f8 00 00", Etube.setShiftMode(false).hex())
     }
 
-    @Test fun probeSweepHasDistinctLabels() {
-        val reads = Etube.PROBE_READS
-        assertTrue(reads.size >= 5)
-        assertEquals(reads.size, reads.map { it.first }.toSet().size) // labels are unique
+    @Test fun sessionFlowHasDistinctLabels() {
+        val steps = Etube.SESSION_FLOW
+        assertTrue(steps.size >= 5)
+        assertEquals(steps.size, steps.map { it.first }.toSet().size) // labels are unique
     }
 
     @Test fun characteristicShortNames() {

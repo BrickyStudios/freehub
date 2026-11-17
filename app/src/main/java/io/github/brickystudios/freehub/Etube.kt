@@ -24,6 +24,7 @@ object Etube {
     val PCE_COMMAND: UUID = Sbi.shimano(0x2AFA)
     val FREE_RESPONSE: UUID = Sbi.shimano(0x2AFD)
     val FEATURE: UUID = Sbi.shimano(0x2AFF)
+    val AF5: UUID = Sbi.shimano(0x2AF5) // E-TUBE writes 01 then 00 here during the session opener
 
     /** what a derailleur never set up in E-TUBE uses */
     const val DEFAULT_PASSKEY = "000000"
@@ -49,32 +50,23 @@ object Etube {
     /** A unit command: control 0x13, then group, command, params. Reply `33 <group> <command|2 = data / |3 = NAK>`. */
     fun unitCommand(group: Int, command: Int, vararg params: Int): ByteArray = ble(0x13, group, command, *params)
 
-    /**
-     * The PCE "PC-link" session E-TUBE opens right after login — the step Freehub was missing, which is why every
-     * feature group answered NAK (`command | 3`) while the ID group (01) answered: `setProtocolMode(0,0)` then
-     * `setPCConnectMode(1)`. Until these run the derailleur rejects the config / history / shift reads.
-     */
-    val SESSION_OPEN: List<Pair<String, ByteArray>> = listOf(
-        "setProtocolMode" to ble(0x03, 0x00), // reply 23 xx; xx & 31 = the bus-assigned app slot
-        "setPCConnect" to ble(0x0C, 0x01),    // reply 2C xx; the "PC connected" unlock
-    )
-
     /** Set the shift mode (group 0x0B, command 0xF8): 1 = manual front shifting, 0 = synchronized. A write. */
     fun setShiftMode(manual: Boolean) = unitCommand(0x0B, 0xF8, if (manual) 1 else 0, 0)
 
     /**
-     * The developer probe sweep, run after [SESSION_OPEN]: the feature reads that NAKed before the session was
-     * opened. If the shift (synchro) config now answers `command | 2` (data) instead of `| 3`, the session was the
-     * whole gate. Synchro params are E-TUBE's real `getSynchro(mode 0x10, direction 0, fdPosition 1)`.
+     * The exact session E-TUBE runs after login, read byte-for-byte from an E-TUBE Bluetooth HCI snoop: command
+     * mode, a `00 05` on 2AFA, an id read, two writes on 2AF5, a firmware read, then `setProtocolMode` (`00 03 00`).
+     * The last one makes the derailleur **stream its whole configuration, unsolicited, on 0x2AFD** as
+     * `00 <group> <command> <data…>` — no per-feature reads are needed. Each step is `(label, characteristic, bytes)`.
      */
-    val PROBE_READS: List<Pair<String, ByteArray>> = listOf(
-        "fw" to unitCommand(0x01, 0x2C, 0),                 // control: answered even before the session
-        "synchro" to unitCommand(0x32, 0xAC, 0x10, 1, 0, 0),
-        "sub-synchro" to unitCommand(0x32, 0xEC, 0x10, 1, 0, 0),
-        "gear-usage" to unitCommand(0x33, 0x04, 0, 1, 1),
-        "date" to unitCommand(0x4A, 0x04, 0),
-        "error-log" to unitCommand(0x32, 0xCC, 0),
-        "auto-shift" to unitCommand(0x0B, 0xEC, 0),
+    val SESSION_FLOW: List<Triple<String, UUID, ByteArray>> = listOf(
+        Triple("command-mode", FEATURE, COMMAND_MODE),         // ff 00 → 2AFF
+        Triple("pce-05", PCE_COMMAND, ble(0x05)),              // 00 05 → 2AFA, reply 25 44 …
+        Triple("read id", PCE_COMMAND, unitCommand(0x01, 0x1C, 0)),
+        Triple("af5 on", AF5, byteArrayOf(0x01)),
+        Triple("af5 off", AF5, byteArrayOf(0x00)),
+        Triple("read firmware", PCE_COMMAND, unitCommand(0x01, 0x2C, 0)),
+        Triple("setProtocolMode", PCE_COMMAND, ble(0x03, 0x00)), // 00 03 00 → config streams on 2AFD
     )
 
     /**

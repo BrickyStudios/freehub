@@ -371,21 +371,21 @@ object Di2 {
     /** gap between the swept read commands, so each reply lands under its own label */
     private const val MEMORY_SWEEP_STEP_MS = 1_000L
 
-    /** the ordered commands the current read sends after login: the session handshake, then reads or a write */
-    private var memorySweep: List<Pair<String, ByteArray>> = emptyList()
+    /** the ordered steps the current read sends after login: each (label, characteristic, bytes) */
+    private var memorySweep: List<Triple<String, java.util.UUID, ByteArray>> = emptyList()
 
-    /** Developer options: log in, open the PCE session, then sweep every read command for one capture. */
+    /** Developer options: log in, run the E-TUBE session; the derailleur then streams its config on 0x2AFD. */
     fun readMemory() {
-        memorySweep = Etube.SESSION_OPEN + Etube.PROBE_READS
+        memorySweep = Etube.SESSION_FLOW
         login("memory read: login with E-TUBE handshake") { sweepProbe(0) }
     }
 
     /**
-     * Developer options: log in, open the PCE session, then set the shift mode (manual vs synchronized).
+     * Developer options: log in, open the session, then set the shift mode (manual vs synchronized).
      * A write — it changes the derailleur, so it only runs when the rider taps it. Reversible with the shifter.
      */
     fun setShiftMode(manual: Boolean) {
-        memorySweep = Etube.SESSION_OPEN + ("set shift mode ${if (manual) "manual" else "synchronized"}" to Etube.setShiftMode(manual))
+        memorySweep = Etube.SESSION_FLOW + Triple("set shift mode ${if (manual) "manual" else "synchronized"}", Etube.PCE_COMMAND, Etube.setShiftMode(manual))
         login("set shift mode: ${if (manual) "manual" else "synchronized"}") { sweepProbe(0) }
     }
 
@@ -434,10 +434,10 @@ object Di2 {
     private fun sweepProbe(i: Int) {
         if (!memoryPending) return
         val reads = memorySweep
-        val (label, bytes) = reads.getOrNull(i) ?: return
+        val (label, char, bytes) = reads.getOrNull(i) ?: return
         memoryLastLabel = label
-        DevLog.note("probe: $label")
-        write(Etube.SERVICE, Etube.PCE_COMMAND, bytes)
+        DevLog.note("step: $label")
+        write(Etube.SERVICE, char, bytes)
         kick()
         if (i + 1 < reads.size) main.postDelayed({ sweepProbe(i + 1) }, MEMORY_SWEEP_STEP_MS)
     }
