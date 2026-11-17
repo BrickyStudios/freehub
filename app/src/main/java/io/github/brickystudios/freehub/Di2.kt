@@ -374,12 +374,8 @@ object Di2 {
         val withData = memoryResults.filter { it.second }.map { it.first }.distinct()
         endMemory(when {
             withData.isNotEmpty() -> tr(
-                "Dein Schaltwerk hat Daten für: ${withData.joinToString(", ")}. Der Rest ist leer (nie in E-TUBE eingerichtet). Mitschnitt teilen.",
-                "Your derailleur has data for: ${withData.joinToString(", ")}. The rest is empty (never set up in E-TUBE). Share the capture.",
-            )
-            memoryResults.isNotEmpty() -> tr(
-                "Schaltwerk antwortet, hat aber zu nichts Daten gespeichert (nie in E-TUBE eingerichtet). Mitschnitt teilen.",
-                "The derailleur answers but has no stored data for anything (never set up in E-TUBE). Share the capture.",
+                "Antwort mit Daten: ${withData.joinToString(", ")}. Mitschnitt teilen.",
+                "Answered with data: ${withData.joinToString(", ")}. Share the capture.",
             )
             memoryPackets > 0 -> tr("Fertig: $memoryPackets Antworten. Mitschnitt teilen.", "Done: $memoryPackets replies. Share the capture.")
             else -> tr("Angemeldet, aber keine Antworten. Mitschnitt teilen.", "Logged in, but no replies. Share the capture.")

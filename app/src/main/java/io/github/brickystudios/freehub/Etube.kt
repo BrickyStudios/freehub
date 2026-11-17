@@ -38,48 +38,34 @@ object Etube {
     val COMMAND_MODE = hex("ff00")
 
     /**
-     * A unit command in the form the RD-R7150 accepts (BikeBridge's unit-command opcode 0x13): slot 0x00,
-     * opcode 0x13, group, command, then the parameters. The reply on 0x2AF9 is `33 <group> <reply command> …`,
-     * where the reply command is `command | 2` for data and `command | 3` when the unit has nothing to send.
-     * The exact group/command bytes come from E-TUBE's own `UnitCommandSetting(…, group, command, …)` sites.
+     * A unit command (BikeBridge's unit-command opcode 0x13): target [slot], opcode 0x13, group, command, params.
+     * The reply on 0x2AF9 is `33 <group> <reply command> …`, where the reply command is `command | 2` for data
+     * and `command | 3` when the unit has nothing to send. Byte 0 is the slot: E-TUBE sends each command to the
+     * slot of the unit that owns it (`UnitProtocol.getSlotNo()`), not always 0 — that is why firmware (a system
+     * read) answered at slot 0 but the config reads did not.
      */
-    fun unitCommand(group: Int, command: Int, vararg params: Int): ByteArray =
-        byteArrayOf(0x00, 0x13, group.toByte(), command.toByte()) + ByteArray(params.size) { params[it].toByte() }
+    fun unitCommand(slot: Int, group: Int, command: Int, vararg params: Int): ByteArray =
+        byteArrayOf(slot.toByte(), 0x13, group.toByte(), command.toByte()) + ByteArray(params.size) { params[it].toByte() }
 
     /**
      * Set the shift mode (E-TUBE's `DCC_CMD_EXTM_RA_SFT_MODE_SEL_SET_C`): group 0x0B, command 0xF8, then
      * `1` = manual front shifting, `0` = synchronized, and a trailing 0. A write — it changes the derailleur.
+     * shortcut: slot 0; may need the derailleur's real slot, like the reads — upgrade once the slot sweep lands.
      */
-    fun setShiftMode(manual: Boolean) = unitCommand(0x0B, 0xF8, if (manual) 1 else 0, 0)
+    fun setShiftMode(manual: Boolean) = unitCommand(0, 0x0B, 0xF8, if (manual) 1 else 0, 0)
 
     /**
-     * Every read the developer "probe" sweeps after login, so one capture reveals every reply format at once.
-     * All read-only (`*_GET`); the parameters are a best guess (mostly a zero), which is enough to see which
-     * commands answer and how. Decoding and the matching screens follow from the capture.
+     * The developer probe sweep. Firmware and unit count answered at slot 0, but the config reads did not —
+     * most likely because E-TUBE addresses each unit by its own slot. So this sweeps the units' slots: firmware
+     * at slots 0–5 shows which slots hold a unit, and the shift (synchro) config at slots 0–5 shows which unit
+     * owns it. One capture finds the addressing; then every read targets the right slot.
      */
-    val PROBE_READS: List<Pair<String, ByteArray>> = listOf(
-        "fw-version" to unitCommand(0x01, 0x2C, 0),        // UNIT_FW_VER_GET
-        "unit-count" to unitCommand(0x01, 0x94, 0),        // SYS_HAVE_UNIT_NO_GET_C
-        "slot-no" to unitCommand(0x02, 0x14, 0),           // SYS_SLOT_STOCK_NO_GET
-        "date" to unitCommand(0x4A, 0x04, 0),              // TMR_DATE_GET
-        "date-adj" to unitCommand(0x4A, 0x0C, 0),          // TMR_DATE_ADJ_GET
-        "value" to unitCommand(0x32, 0x84, 0),             // PCA_DATA_VALUE_PART_UNIT_GET
-        "data-via-unit" to unitCommand(0x32, 0xBC, 0),     // PCA_DATA_VIA_UNIT_GET
-        "synchro" to unitCommand(0x32, 0xAC, 0, 0, 0, 0),  // PCA_SYNC_GET_C (shift-mode / synchro config)
-        "sub-synchro" to unitCommand(0x32, 0xEC, 0, 0, 0, 0), // PCA_SUB_SYNC_GET_C (semi-synchro)
-        "auto-shift" to unitCommand(0x0B, 0xEC, 0),        // EXTM_RA_AUTO_SFT_GET_C
-        "alt-num" to unitCommand(0x0B, 0x7C, 0),           // EXTM_RA_ALT_NUM_GET
-        "usage-old" to unitCommand(0x32, 0xC4, 0),         // PCA_HIST_USE_GET
-        "tampering" to unitCommand(0x33, 0x64, 0),         // PCA2_TAMPERING_INFO_GET_C
-        "gear-usage" to unitCommand(0x33, 0x04, 0, 1, 1),  // PCA2_HIST2_USE_GET (known: no data on this RD)
-        "error-log0" to unitCommand(0x32, 0xCC, 0),        // PCA_HIST_ERR_GET index 0
-        "error-log1" to unitCommand(0x32, 0xCC, 1),
-        "error-log2" to unitCommand(0x32, 0xCC, 2),
-        "value-1" to unitCommand(0x32, 0x84, 1),           // the value reader takes an id; 0 was empty, try a few
-        "value-2" to unitCommand(0x32, 0x84, 2),
-        "value-3" to unitCommand(0x32, 0x84, 3),
-        "value-4" to unitCommand(0x32, 0x84, 4),
-    )
+    val PROBE_READS: List<Pair<String, ByteArray>> = buildList {
+        for (s in 0..5) add("fw@$s" to unitCommand(s, 0x01, 0x2C, 0))              // which slots hold a unit
+        for (s in 0..5) add("synchro@$s" to unitCommand(s, 0x32, 0xAC, 0, 0, 0, 0)) // which slot owns the shift config
+        for (s in 0..5) add("value@$s" to unitCommand(s, 0x32, 0x84, 0))           // the general value reader, per slot
+        add("unit-count" to unitCommand(0, 0x01, 0x94, 0))                          // control: known to answer
+    }
 
     /**
      * Whether a `33 <group> <reply command> …` reply carries data. The reply command is the request command

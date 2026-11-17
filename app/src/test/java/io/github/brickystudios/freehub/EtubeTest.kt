@@ -22,11 +22,11 @@ class EtubeTest {
         assertEquals("000000", Etube.passkeyOrDefault("12345a".toByteArray()))
     }
 
-    @Test fun unitCommandWrapsGroupCommandAndParams() {
-        // slot 0x00, opcode 0x13, then group, command, params
-        assertEquals("00 13 33 04 00 01 01", Etube.unitCommand(0x33, 0x04, 0, 1, 1).hex())
-        assertEquals("00 13 32 cc 00", Etube.unitCommand(0x32, 0xCC, 0).hex())
-        assertEquals("00 13 01 2c 00", Etube.unitCommand(0x01, 0x2C, 0).hex())
+    @Test fun unitCommandWrapsSlotGroupCommandAndParams() {
+        // slot, opcode 0x13, then group, command, params
+        assertEquals("00 13 33 04 00 01 01", Etube.unitCommand(0, 0x33, 0x04, 0, 1, 1).hex())
+        assertEquals("02 13 32 ac 00 00 00 00", Etube.unitCommand(2, 0x32, 0xAC, 0, 0, 0, 0).hex())
+        assertEquals("05 13 01 2c 00", Etube.unitCommand(5, 0x01, 0x2C, 0).hex())
     }
 
     @Test fun replyDataVsNoData() {
@@ -49,7 +49,6 @@ class EtubeTest {
         assertTrue(reads.size >= 10)
         assertEquals(reads.size, reads.map { it.first }.toSet().size) // labels are unique
         reads.forEach { (_, bytes) ->
-            assertEquals(0x00.toByte(), bytes[0])
             assertEquals(0x13.toByte(), bytes[1]) // every command uses the 0x13 unit-command opcode
         }
     }
