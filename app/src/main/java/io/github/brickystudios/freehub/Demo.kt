@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import android.content.Context
 import android.os.Handler

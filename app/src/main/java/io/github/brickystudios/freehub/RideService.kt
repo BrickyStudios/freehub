@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -33,6 +33,7 @@ class RideService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        Lang.init(this)
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Fahrt", "Ride"), NotificationManager.IMPORTANCE_LOW))
         val first = note(texts(Di2.bike.value, Counter.now.value))

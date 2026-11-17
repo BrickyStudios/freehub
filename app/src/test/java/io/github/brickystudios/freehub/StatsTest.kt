@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame

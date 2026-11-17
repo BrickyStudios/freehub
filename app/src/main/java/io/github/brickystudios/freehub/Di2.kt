@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice

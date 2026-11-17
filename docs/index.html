@@ -3,27 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Schaltblick: Shimano Di2 app for Android, no account</title>
+<title>Freehub: Shimano Di2 app for Android, no account</title>
 <meta name="description" content="Open-source Android app for 12-speed Shimano Di2: live gear, battery and shift count from the rear derailleur. No SHIMANO ID, no cloud, no tracking.">
-<link rel="canonical" href="https://brickystudios.github.io/schaltblick/">
-<link rel="alternate" hreflang="en" href="https://brickystudios.github.io/schaltblick/">
-<link rel="alternate" hreflang="de" href="https://brickystudios.github.io/schaltblick/de/">
-<link rel="alternate" hreflang="x-default" href="https://brickystudios.github.io/schaltblick/">
+<link rel="canonical" href="https://brickystudios.github.io/freehub/">
+<link rel="alternate" hreflang="en" href="https://brickystudios.github.io/freehub/">
+<link rel="alternate" hreflang="de" href="https://brickystudios.github.io/freehub/de/">
+<link rel="alternate" hreflang="x-default" href="https://brickystudios.github.io/freehub/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Schaltblick: Shimano Di2 without E-TUBE">
+<meta property="og:title" content="Freehub: Shimano Di2 without E-TUBE">
 <meta property="og:description" content="Gear, battery and shift count for 12-speed Di2, read live on Android. No account.">
-<meta property="og:url" content="https://brickystudios.github.io/schaltblick/">
-<meta property="og:image" content="https://brickystudios.github.io/schaltblick/bilder/social-preview.png">
+<meta property="og:url" content="https://brickystudios.github.io/freehub/">
+<meta property="og:image" content="https://brickystudios.github.io/freehub/bilder/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0D0E10">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
-{"@type":"SoftwareApplication","name":"Schaltblick","operatingSystem":"Android 8.0 or newer","applicationCategory":"SportsApplication","softwareVersion":"0.1.0","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/schaltblick/releases/latest/download/Schaltblick.apk","url":"https://brickystudios.github.io/schaltblick/","screenshot":"https://brickystudios.github.io/schaltblick/bilder/app/live-en-dark.png","description":"Live gear, battery and shift count from a 12-speed Shimano Di2 rear derailleur over Bluetooth, without a SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
+{"@type":"SoftwareApplication","name":"Freehub","operatingSystem":"Android 8.0 or newer","applicationCategory":"SportsApplication","softwareVersion":"0.1.0","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk","url":"https://brickystudios.github.io/freehub/","screenshot":"https://brickystudios.github.io/freehub/bilder/app/live-en-dark.png","description":"Live gear, battery and shift count from a 12-speed Shimano Di2 rear derailleur over Bluetooth, without a SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
 {"@type":"FAQPage","mainEntity":[
-{"@type":"Question","name":"Do I need E-TUBE PROJECT or a SHIMANO ID?","acceptedAnswer":{"@type":"Answer","text":"No. Schaltblick reads the Bluetooth service that bike computers use. You never sign in."}},
-{"@type":"Question","name":"Can Schaltblick change my shift settings?","acceptedAnswer":{"@type":"Answer","text":"Not in version 0.1, which only reads. Changing Synchro maps or button functions needs Shimano’s authentication and more testing on real bikes."}},
+{"@type":"Question","name":"Do I need E-TUBE PROJECT or a SHIMANO ID?","acceptedAnswer":{"@type":"Answer","text":"No. Freehub reads the Bluetooth service that bike computers use. You never sign in."}},
+{"@type":"Question","name":"Can Freehub change my shift settings?","acceptedAnswer":{"@type":"Answer","text":"Not in version 0.1, which only reads. Changing Synchro maps or button functions needs Shimano’s authentication and more testing on real bikes."}},
 {"@type":"Question","name":"Does it work with 11-speed Di2?","acceptedAnswer":{"@type":"Answer","text":"Untested. 11-speed Di2 needs Shimano’s separate EW-WU111 wireless unit."}},
 {"@type":"Question","name":"Where does the protocol come from?","acceptedAnswer":{"@type":"Answer","text":"From a real RD-R7150 and from how Shimano’s own apps read it. PROTOCOL.md in the repository documents every byte."}}
 ]}
@@ -32,13 +32,13 @@
 </head>
 <body>
 <header class="container nav">
-  <a class="wordmark" href="./" aria-label="Schaltblick home">
+  <a class="wordmark" href="./" aria-label="Freehub home">
     <svg viewBox="22 22 64 64" aria-hidden="true"><path fill="currentColor" d="M31,45h5v18h-5z M39,42h5v24h-5z M47,39h5v30h-5z M63,33h5v42h-5z M71,30h5v48h-5z"/><path fill="var(--color-accent)" d="M55,36h5v36h-5z"/></svg>
-    Schaltblick
+    Freehub
   </a>
   <nav aria-label="Main">
     <ul>
-      <li><a href="https://github.com/BrickyStudios/schaltblick">GitHub</a></li>
+      <li><a href="https://github.com/BrickyStudios/freehub">GitHub</a></li>
       <li><a href="de/" hreflang="de" lang="de">Deutsch</a></li>
     </ul>
   </nav>
@@ -50,12 +50,12 @@
       <h1>Your Di2, at a glance.</h1>
       <p class="lead">Gear, battery and every shift from a 12-speed Shimano Di2. No account.</p>
       <div class="actions">
-        <a class="button" href="https://github.com/BrickyStudios/schaltblick/releases/latest/download/Schaltblick.apk">Download the APK</a>
-        <a class="button quiet" href="https://github.com/BrickyStudios/schaltblick">Source on GitHub</a>
+        <a class="button" href="https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk">Download the APK</a>
+        <a class="button quiet" href="https://github.com/BrickyStudios/freehub">Source on GitHub</a>
       </div>
       <p class="note">Android 8 or newer. Free and open source under GPL-3.0.</p>
     </div>
-    <img class="screen" src="bilder/app/live-en-dark.png" width="1080" height="2400" alt="Schaltblick showing the gear 50 × 15, the cassette with the current cog in pink, ratio 3.33 and shift mode S1">
+    <img class="screen" src="bilder/app/live-en-dark.png" width="1080" height="2400" alt="Freehub showing the gear 50 × 15, the cassette with the current cog in pink, ratio 3.33 and shift mode S1">
   </section>
 
   <section class="band">
@@ -63,7 +63,7 @@
       <img class="screen" src="bilder/app/stats-en-dark.png" width="1080" height="2400" loading="lazy" alt="Statistics: 2,553 shifts in 13 rides, 1 % cross-chained, favourite gear 50 × 17 and a heatmap of chainring and cog">
       <div>
         <h2>Every shift, counted.</h2>
-        <p>A multi-shift across three cogs counts as three. Schaltblick keeps the time you spend in each chainring and cog and draws it as a heatmap, with cross-chained gears outlined in orange.</p>
+        <p>A multi-shift across three cogs counts as three. Freehub keeps the time you spend in each chainring and cog and draws it as a heatmap, with cross-chained gears outlined in orange.</p>
         <p>A ride ends on its own ten minutes after the derailleur falls asleep.</p>
       </div>
     </div>
@@ -75,7 +75,7 @@
       <div class="facts">
         <div><h3>No sign-in</h3><p>No SHIMANO ID, no account of any kind.</p></div>
         <div><h3>One connection</h3><p>Bluetooth to the derailleur, plus an update check on GitHub you can switch off.</p></div>
-        <div><h3>Read only</h3><p>Schaltblick never writes settings or firmware.</p></div>
+        <div><h3>Read only</h3><p>Freehub never writes settings or firmware.</p></div>
       </div>
     </div>
   </section>
@@ -102,24 +102,24 @@
     <div class="container qa">
       <h2>Questions</h2>
       <div class="faq">
-        <details><summary>Do I need E-TUBE PROJECT or a SHIMANO ID?</summary><p>No. Schaltblick reads the Bluetooth service bike computers use.</p></details>
+        <details><summary>Do I need E-TUBE PROJECT or a SHIMANO ID?</summary><p>No. Freehub reads the Bluetooth service bike computers use.</p></details>
         <details><summary>Can it change my shift settings?</summary><p>Not yet. Version 0.1 only reads.</p></details>
         <details><summary>Does it work with 11-speed Di2?</summary><p>Untested. 11-speed needs Shimano’s EW-WU111 wireless unit.</p></details>
-        <details><summary>Where does the protocol come from?</summary><p>From a real RD-R7150, documented byte by byte in <a href="https://github.com/BrickyStudios/schaltblick/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</p></details>
+        <details><summary>Where does the protocol come from?</summary><p>From a real RD-R7150, documented byte by byte in <a href="https://github.com/BrickyStudios/freehub/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</p></details>
       </div>
     </div>
   </section>
 </main>
 
 <footer class="container footer">
-  <a class="wordmark" href="./">Schaltblick</a>
+  <a class="wordmark" href="./">Freehub</a>
   <ul>
-    <li><a href="https://github.com/BrickyStudios/schaltblick/releases">Releases</a></li>
-    <li><a href="https://github.com/BrickyStudios/schaltblick/blob/main/PROTOCOL.md">Protocol</a></li>
-    <li><a href="https://github.com/BrickyStudios/schaltblick">Source code</a></li>
+    <li><a href="https://github.com/BrickyStudios/freehub/releases">Releases</a></li>
+    <li><a href="https://github.com/BrickyStudios/freehub/blob/main/PROTOCOL.md">Protocol</a></li>
+    <li><a href="https://github.com/BrickyStudios/freehub">Source code</a></li>
     <li><a href="de/" hreflang="de" lang="de">Deutsch</a></li>
   </ul>
-  <p>Shimano, Di2 and E-TUBE are trademarks of SHIMANO INC. Schaltblick is not affiliated with Shimano.</p>
+  <p>Shimano, Di2 and E-TUBE are trademarks of SHIMANO INC. Freehub is not affiliated with Shimano.</p>
 </footer>
 </body>
 </html>

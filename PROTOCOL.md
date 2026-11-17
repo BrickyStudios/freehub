@@ -1,6 +1,6 @@
 # Shimano Di2 Bluetooth LE protocol (12-speed)
 
-What a 12-speed Di2 rear derailleur (RD-R7150, RD-R8150, RD-R9250 and relatives) exposes over Bluetooth LE, as far as Schaltblick uses it. Checked against an RD-R7150 (105 Di2) with firmware read live over GATT.
+What a 12-speed Di2 rear derailleur (RD-R7150, RD-R8150, RD-R9250 and relatives) exposes over Bluetooth LE, as far as Freehub uses it. Checked against an RD-R7150 (105 Di2) with firmware read live over GATT.
 
 All Shimano UUIDs share one base: `0000XXXX-5348-494d-414e-4f5f424c4500`. The last twelve bytes are ASCII for `SHIMANO_BLE`.
 
@@ -19,7 +19,7 @@ The derailleur advertises only while awake. It sleeps when the bike stands still
 
 | UUID | Name | Used by |
 |---|---|---|
-| `0x18EF` | Shimano Bicycle Information (SBI) | bike computers, E-TUBE RIDE, **Schaltblick** |
+| `0x18EF` | Shimano Bicycle Information (SBI) | bike computers, E-TUBE RIDE, **Freehub** |
 | `0x18FF` | E-TUBE | E-TUBE PROJECT (settings, logs) |
 | `0x18FE` | DFU | firmware updates |
 | `0x180F` | Battery | standard |
@@ -114,7 +114,7 @@ High nibble of byte 0 is the type, low nibble a sequence number that changes wit
 
 Some phones need a bonded link before the indication arrives. Pairing is "just works", no PIN.
 
-## 0x18FF E-TUBE (not used by Schaltblick yet)
+## 0x18FF E-TUBE (not used by Freehub yet)
 
 The settings channel of E-TUBE PROJECT. It needs an authentication handshake first (passkey plus an app key, AES over a nonce from `0x2AF4`); [BikeBridge](https://codeberg.org/bg443/BikeBridge) implements it for Shimano e-bike motors, and the derailleur uses the same characteristics.
 
@@ -128,7 +128,7 @@ The settings channel of E-TUBE PROJECT. It needs an authentication handshake fir
 | `0x2AFD` / `0x2AFE` | free response / command |
 | `0x2AFF` | feature |
 
-The derailleur keeps its own gear usage history (time per chainring and cog) which E-TUBE PROJECT reads over the PCE channel with command group `0x33`, command `0x04`. Reading it is planned for Schaltblick 0.2. Schaltblick never writes to `0x18FF` or `0x18FE`.
+The derailleur keeps its own gear usage history (time per chainring and cog) which E-TUBE PROJECT reads over the PCE channel with command group `0x33`, command `0x04`. Reading it is planned for Freehub 0.2. Freehub never writes to `0x18FF` or `0x18FE`.
 
 ## How this was worked out
 

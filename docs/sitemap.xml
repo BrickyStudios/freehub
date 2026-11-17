@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <url><loc>https://brickystudios.github.io/schaltblick/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://brickystudios.github.io/schaltblick/"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://brickystudios.github.io/schaltblick/de/"/></url>
-  <url><loc>https://brickystudios.github.io/schaltblick/de/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://brickystudios.github.io/schaltblick/"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://brickystudios.github.io/schaltblick/de/"/></url>
+  <url><loc>https://brickystudios.github.io/freehub/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://brickystudios.github.io/freehub/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://brickystudios.github.io/freehub/de/"/></url>
+  <url><loc>https://brickystudios.github.io/freehub/de/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://brickystudios.github.io/freehub/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://brickystudios.github.io/freehub/de/"/></url>
 </urlset>

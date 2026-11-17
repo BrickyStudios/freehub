@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import org.json.JSONObject
 
@@ -9,9 +9,9 @@ data class UpdateState(val release: Release, val progress: Float? = null, val fa
 
 /** What a GitHub release means for this install. Pure, so the JVM tests cover it. */
 object Releases {
-    const val LATEST = "https://api.github.com/repos/BrickyStudios/schaltblick/releases/latest"
-    const val PAGE = "https://github.com/BrickyStudios/schaltblick/releases/latest"
-    private const val DOWNLOADS = "https://github.com/BrickyStudios/schaltblick/releases/download/"
+    const val LATEST = "https://api.github.com/repos/BrickyStudios/freehub/releases/latest"
+    const val PAGE = "https://github.com/BrickyStudios/freehub/releases/latest"
+    private const val DOWNLOADS = "https://github.com/BrickyStudios/freehub/releases/download/"
 
     /** "v0.10.0" is newer than "0.9.2". */
     fun isNewer(tag: String, current: String): Boolean {
@@ -25,7 +25,7 @@ object Releases {
         return false
     }
 
-    /** Reads GitHub's answer. Only the asset named Schaltblick.apk, from this repo's own downloads, counts. */
+    /** Reads GitHub's answer. Only the asset named Freehub.apk, from this repo's own downloads, counts. */
     fun parse(json: String, apkName: String): Release? = runCatching {
         val o = JSONObject(json)
         val assets = o.getJSONArray("assets")

@@ -28,9 +28,10 @@
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="Schaltblick"
+        android:label="Freehub"
+        android:localeConfig="@xml/locales_config"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Schaltblick">
+        android:theme="@style/Theme.Freehub">
 
         <activity
             android:name=".MainActivity"

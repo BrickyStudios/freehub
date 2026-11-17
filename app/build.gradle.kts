@@ -5,19 +5,19 @@ plugins {
 }
 
 android {
-    namespace = "io.github.brickystudios.schaltblick"
+    namespace = "io.github.brickystudios.freehub"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "io.github.brickystudios.schaltblick"
+        applicationId = "io.github.brickystudios.freehub"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "APK_NAME", "\"Schaltblick.apk\"")
+        buildConfigField("String", "APK_NAME", "\"Freehub.apk\"")
     }
 
-    // Release key lives only in CI secrets (and ~/.config/schaltblick on the maintainer's machine).
+    // Release key lives only in CI secrets (and ~/.config/freehub on the maintainer's machine).
     // Without it, local release builds fall back to the debug key so they still install.
     val storePass = System.getenv("SIGNING_STORE_PASSWORD")
     signingConfigs {

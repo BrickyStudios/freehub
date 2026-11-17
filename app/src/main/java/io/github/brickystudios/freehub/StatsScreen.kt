@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,14 +49,14 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, onReset: () -> Un
         )
         Spacer(Modifier.height(24.dp))
         if (ms == 0L) {
-            Panel { BodyText(tr("Noch keine Fahrt. Sobald das Schaltwerk verbunden ist, zählt Schaltblick jeden Gangwechsel.", "No ride yet. Once the derailleur is connected, Schaltblick counts every shift."), color = P.muted) }
+            Panel { BodyText(tr("Noch keine Fahrt. Sobald das Schaltwerk verbunden ist, zählt Freehub jeden Gangwechsel.", "No ride yet. Once the derailleur is connected, Freehub counts every shift."), color = P.muted) }
             return@Column
         }
         val fav = Usage.favourite(usage)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Field("%.0f".format(shifts / (ms / 3_600_000f).coerceAtLeast(0.01f)), tr("pro Stunde", "per hour"), Modifier.weight(1f))
+            Field("%.0f".fmt(shifts / (ms / 3_600_000f).coerceAtLeast(0.01f)), tr("pro Stunde", "per hour"), Modifier.weight(1f))
             val cross = Usage.crossShare(usage, frontMax, rearMax)
-            Field("%.0f %%".format(cross * 100), tr("Schräglauf", "Cross-chain"), Modifier.weight(1f), color = if (cross > 0.1f) P.warn else P.ink)
+            Field("%.0f %%".fmt(cross * 100), tr("Schräglauf", "Cross-chain"), Modifier.weight(1f), color = if (cross > 0.1f) P.warn else P.ink)
             Field(fav?.let { gearName(it, gears) } ?: "–", tr("Lieblingsgang", "Favourite"), Modifier.weight(1f))
         }
         Spacer(Modifier.height(28.dp))
@@ -71,12 +71,12 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, onReset: () -> Un
         Spacer(Modifier.height(28.dp))
         Label(tr("Letzte Fahrten", "Recent rides"))
         Spacer(Modifier.height(6.dp))
-        val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
+        val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale()) }
         totals.rides.take(30).forEach { r ->
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     BodyText(fmt.format(Date(r.start)), weight = FontWeight.Medium)
-                    BodyText(duration(r.ms) + " · " + "%.0f".format(r.shifts / (r.ms / 3_600_000f).coerceAtLeast(0.01f)) + tr(" pro Stunde", " per hour"), color = P.muted, size = 14.sp)
+                    BodyText(duration(r.ms) + " · " + "%.0f".fmt(r.shifts / (r.ms / 3_600_000f).coerceAtLeast(0.01f)) + tr(" pro Stunde", " per hour"), color = P.muted, size = 14.sp)
                 }
                 Num(count(r.shifts.toLong()), 30.sp, weight = FontWeight.Bold)
             }
@@ -120,7 +120,7 @@ private fun Heatmap(usage: Map<Gear, Long>, frontMax: Int, rearMax: Int, gears: 
                         Modifier.weight(1f).aspectRatio(0.62f).padding(horizontal = 1.5.dp)
                             .background(if (s > 0f) P.accent.copy(alpha = 0.12f + 0.88f * (s / top)) else P.track, RoundedCornerShape(2.dp))
                             .then(if (cross) Modifier.border(1.dp, P.warn, RoundedCornerShape(2.dp)) else Modifier)
-                            .semantics { contentDescription = "${gearName(g, gears)}: ${"%.0f".format(s * 100)} %" },
+                            .semantics { contentDescription = "${gearName(g, gears)}: ${"%.0f".fmt(s * 100)} %" },
                     )
                 }
             }

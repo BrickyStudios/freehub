@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
@@ -61,9 +61,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        Lang.init(this)
         Counter.init(this)
         granted = hasPermissions(this)
-        setContent { SchaltblickTheme { App() } }
+        setContent { FreehubTheme { App() } }
         if (Prefs.updates(this) && !BuildConfig.DEBUG) lifecycleScope.launch { Updater.check(this@MainActivity, manual = false) }
     }
 
@@ -164,7 +165,7 @@ private fun UpdateBar(u: UpdateState, onInstall: () -> Unit, onLater: () -> Unit
                 when {
                     u.failed -> tr("Download fehlgeschlagen", "Download failed")
                     p != null -> tr("Lädt … ${(p * 100).toInt()} %", "Downloading … ${(p * 100).toInt()} %")
-                    else -> "%.1f MB".format(u.release.bytes / 1_000_000f)
+                    else -> "%.1f MB".fmt(u.release.bytes / 1_000_000f)
                 },
                 color = P.muted, size = 13.sp,
             )

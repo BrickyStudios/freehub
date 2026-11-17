@@ -3,27 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Schaltblick: Shimano-Di2-App für Android ohne Konto</title>
+<title>Freehub: Shimano-Di2-App für Android ohne Konto</title>
 <meta name="description" content="Open-Source-App für 12-fach Shimano Di2: aktueller Gang, Akku und Schaltvorgänge live vom Schaltwerk. Ohne SHIMANO ID, ohne Cloud, ohne Tracking.">
-<link rel="canonical" href="https://brickystudios.github.io/schaltblick/de/">
-<link rel="alternate" hreflang="en" href="https://brickystudios.github.io/schaltblick/">
-<link rel="alternate" hreflang="de" href="https://brickystudios.github.io/schaltblick/de/">
-<link rel="alternate" hreflang="x-default" href="https://brickystudios.github.io/schaltblick/">
+<link rel="canonical" href="https://brickystudios.github.io/freehub/de/">
+<link rel="alternate" hreflang="en" href="https://brickystudios.github.io/freehub/">
+<link rel="alternate" hreflang="de" href="https://brickystudios.github.io/freehub/de/">
+<link rel="alternate" hreflang="x-default" href="https://brickystudios.github.io/freehub/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Schaltblick: Shimano Di2 ohne E-TUBE-Konto">
+<meta property="og:title" content="Freehub: Shimano Di2 ohne E-TUBE-Konto">
 <meta property="og:description" content="Gang, Akku und Schaltvorgänge für 12-fach Di2, live auf Android. Ohne Konto.">
-<meta property="og:url" content="https://brickystudios.github.io/schaltblick/de/">
-<meta property="og:image" content="https://brickystudios.github.io/schaltblick/bilder/social-preview.png">
+<meta property="og:url" content="https://brickystudios.github.io/freehub/de/">
+<meta property="og:image" content="https://brickystudios.github.io/freehub/bilder/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0D0E10">
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../style.css">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
-{"@type":"SoftwareApplication","name":"Schaltblick","operatingSystem":"Android 8.0 oder neuer","applicationCategory":"SportsApplication","softwareVersion":"0.1.0","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/schaltblick/releases/latest/download/Schaltblick.apk","url":"https://brickystudios.github.io/schaltblick/de/","screenshot":"https://brickystudios.github.io/schaltblick/bilder/app/live-de-dark.png","description":"Aktueller Gang, Akku und Schaltvorgänge live vom Schaltwerk einer 12-fach Shimano Di2, per Bluetooth und ohne SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
+{"@type":"SoftwareApplication","name":"Freehub","operatingSystem":"Android 8.0 oder neuer","applicationCategory":"SportsApplication","softwareVersion":"0.1.0","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk","url":"https://brickystudios.github.io/freehub/de/","screenshot":"https://brickystudios.github.io/freehub/bilder/app/live-de-dark.png","description":"Aktueller Gang, Akku und Schaltvorgänge live vom Schaltwerk einer 12-fach Shimano Di2, per Bluetooth und ohne SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
 {"@type":"FAQPage","mainEntity":[
-{"@type":"Question","name":"Brauche ich E-TUBE PROJECT oder eine SHIMANO ID?","acceptedAnswer":{"@type":"Answer","text":"Nein. Schaltblick liest den Bluetooth-Dienst, den auch Radcomputer nutzen. Du meldest dich nirgends an."}},
-{"@type":"Question","name":"Kann Schaltblick meine Schalteinstellungen ändern?","acceptedAnswer":{"@type":"Answer","text":"Noch nicht. Version 0.1 liest nur. Synchro-Tabellen oder Tastenbelegung zu ändern braucht Shimanos Anmeldeverfahren und mehr Tests an echten Rädern."}},
+{"@type":"Question","name":"Brauche ich E-TUBE PROJECT oder eine SHIMANO ID?","acceptedAnswer":{"@type":"Answer","text":"Nein. Freehub liest den Bluetooth-Dienst, den auch Radcomputer nutzen. Du meldest dich nirgends an."}},
+{"@type":"Question","name":"Kann Freehub meine Schalteinstellungen ändern?","acceptedAnswer":{"@type":"Answer","text":"Noch nicht. Version 0.1 liest nur. Synchro-Tabellen oder Tastenbelegung zu ändern braucht Shimanos Anmeldeverfahren und mehr Tests an echten Rädern."}},
 {"@type":"Question","name":"Geht es mit 11-fach Di2?","acceptedAnswer":{"@type":"Answer","text":"Nicht getestet. 11-fach Di2 braucht Shimanos separate Funkeinheit EW-WU111."}},
 {"@type":"Question","name":"Woher kommt das Protokoll?","acceptedAnswer":{"@type":"Answer","text":"Von einem echten RD-R7150 und daraus, wie Shimanos eigene Apps es lesen. PROTOCOL.md im Repository beschreibt jedes Byte."}}
 ]}
@@ -32,13 +32,13 @@
 </head>
 <body>
 <header class="container nav">
-  <a class="wordmark" href="./" aria-label="Schaltblick Startseite">
+  <a class="wordmark" href="./" aria-label="Freehub Startseite">
     <svg viewBox="22 22 64 64" aria-hidden="true"><path fill="currentColor" d="M31,45h5v18h-5z M39,42h5v24h-5z M47,39h5v30h-5z M63,33h5v42h-5z M71,30h5v48h-5z"/><path fill="var(--color-accent)" d="M55,36h5v36h-5z"/></svg>
-    Schaltblick
+    Freehub
   </a>
   <nav aria-label="Hauptmenü">
     <ul>
-      <li><a href="https://github.com/BrickyStudios/schaltblick">GitHub</a></li>
+      <li><a href="https://github.com/BrickyStudios/freehub">GitHub</a></li>
       <li><a href="../" hreflang="en" lang="en">English</a></li>
     </ul>
   </nav>
@@ -50,12 +50,12 @@
       <h1>Dein Di2, auf einen Blick.</h1>
       <p class="lead">Gang, Akku und jeder Schaltvorgang deiner 12-fach Shimano Di2. Ohne Konto.</p>
       <div class="actions">
-        <a class="button" href="https://github.com/BrickyStudios/schaltblick/releases/latest/download/Schaltblick.apk">APK herunterladen</a>
-        <a class="button quiet" href="https://github.com/BrickyStudios/schaltblick">Quellcode auf GitHub</a>
+        <a class="button" href="https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk">APK herunterladen</a>
+        <a class="button quiet" href="https://github.com/BrickyStudios/freehub">Quellcode auf GitHub</a>
       </div>
       <p class="note">Android 8 oder neuer. Kostenlos und quelloffen unter GPL-3.0.</p>
     </div>
-    <img class="screen" src="../bilder/app/live-de-dark.png" width="1080" height="2400" alt="Schaltblick zeigt den Gang 50 × 15, die Kassette mit dem aktuellen Ritzel in Rosa, Übersetzung 3,33 und Schaltmodus S1">
+    <img class="screen" src="../bilder/app/live-de-dark.png" width="1080" height="2400" alt="Freehub zeigt den Gang 50 × 15, die Kassette mit dem aktuellen Ritzel in Rosa, Übersetzung 3,33 und Schaltmodus S1">
   </section>
 
   <section class="band">
@@ -63,7 +63,7 @@
       <img class="screen" src="../bilder/app/stats-de-dark.png" width="1080" height="2400" loading="lazy" alt="Statistik: Schaltvorgänge in 13 Fahrten, Schräglauf-Anteil, Lieblingsgang 50 × 17 und eine Heatmap aus Kettenblatt und Ritzel">
       <div>
         <h2>Jeder Gangwechsel, gezählt.</h2>
-        <p>Ein Multi-Shift über drei Ritzel zählt als drei. Schaltblick misst, wie lange du in jedem Kettenblatt und Ritzel fährst, und zeichnet daraus eine Heatmap. Gänge mit Schräglauf sind orange umrandet.</p>
+        <p>Ein Multi-Shift über drei Ritzel zählt als drei. Freehub misst, wie lange du in jedem Kettenblatt und Ritzel fährst, und zeichnet daraus eine Heatmap. Gänge mit Schräglauf sind orange umrandet.</p>
         <p>Eine Fahrt endet von selbst, zehn Minuten nachdem das Schaltwerk eingeschlafen ist.</p>
       </div>
     </div>
@@ -75,7 +75,7 @@
       <div class="facts">
         <div><h3>Keine Anmeldung</h3><p>Keine SHIMANO ID, überhaupt kein Konto.</p></div>
         <div><h3>Eine Verbindung</h3><p>Bluetooth zum Schaltwerk, dazu eine abschaltbare Update-Prüfung bei GitHub.</p></div>
-        <div><h3>Nur lesen</h3><p>Schaltblick schreibt weder Einstellungen noch Firmware.</p></div>
+        <div><h3>Nur lesen</h3><p>Freehub schreibt weder Einstellungen noch Firmware.</p></div>
       </div>
     </div>
   </section>
@@ -102,24 +102,24 @@
     <div class="container qa">
       <h2>Fragen</h2>
       <div class="faq">
-        <details><summary>Brauche ich E-TUBE PROJECT oder eine SHIMANO ID?</summary><p>Nein. Schaltblick liest den Bluetooth-Dienst, den auch Radcomputer nutzen.</p></details>
+        <details><summary>Brauche ich E-TUBE PROJECT oder eine SHIMANO ID?</summary><p>Nein. Freehub liest den Bluetooth-Dienst, den auch Radcomputer nutzen.</p></details>
         <details><summary>Kann es meine Schalteinstellungen ändern?</summary><p>Noch nicht. Version 0.1 liest nur.</p></details>
         <details><summary>Geht es mit 11-fach Di2?</summary><p>Nicht getestet. 11-fach braucht Shimanos Funkeinheit EW-WU111.</p></details>
-        <details><summary>Woher kommt das Protokoll?</summary><p>Von einem echten RD-R7150, Byte für Byte beschrieben in <a href="https://github.com/BrickyStudios/schaltblick/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</p></details>
+        <details><summary>Woher kommt das Protokoll?</summary><p>Von einem echten RD-R7150, Byte für Byte beschrieben in <a href="https://github.com/BrickyStudios/freehub/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</p></details>
       </div>
     </div>
   </section>
 </main>
 
 <footer class="container footer">
-  <a class="wordmark" href="./">Schaltblick</a>
+  <a class="wordmark" href="./">Freehub</a>
   <ul>
-    <li><a href="https://github.com/BrickyStudios/schaltblick/releases">Releases</a></li>
-    <li><a href="https://github.com/BrickyStudios/schaltblick/blob/main/PROTOCOL.md">Protokoll</a></li>
-    <li><a href="https://github.com/BrickyStudios/schaltblick">Quellcode</a></li>
+    <li><a href="https://github.com/BrickyStudios/freehub/releases">Releases</a></li>
+    <li><a href="https://github.com/BrickyStudios/freehub/blob/main/PROTOCOL.md">Protokoll</a></li>
+    <li><a href="https://github.com/BrickyStudios/freehub">Quellcode</a></li>
     <li><a href="../" hreflang="en" lang="en">English</a></li>
   </ul>
-  <p>Shimano, Di2 und E-TUBE sind Marken der SHIMANO INC. Schaltblick hat keine Verbindung zu Shimano.</p>
+  <p>Shimano, Di2 und E-TUBE sind Marken der SHIMANO INC. Freehub hat keine Verbindung zu Shimano.</p>
 </footer>
 </body>
 </html>

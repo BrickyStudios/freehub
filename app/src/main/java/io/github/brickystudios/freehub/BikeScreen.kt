@@ -1,5 +1,6 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -50,7 +51,7 @@ fun BikeScreen(bike: Bike, gears: Gears?, onDemo: (Boolean) -> Unit, onCheckUpda
         Info(tr("Multi-Shift-Intervall", "Multi-shift interval"), gears?.multiShiftInterval?.toString() ?: "–")
         Info(
             tr("Feinjustierung hinten", "Rear fine-tune"),
-            gears?.rearAdjust?.let { a -> (if (a == 0) "0" else "%+d".format(a)) + (if (gears.rearAdjustMin != null && gears.rearAdjustMax != null) "  (${gears.rearAdjustMin} … +${gears.rearAdjustMax})" else "") } ?: "–",
+            gears?.rearAdjust?.let { a -> (if (a == 0) "0" else "%+d".fmt(a)) + (if (gears.rearAdjustMin != null && gears.rearAdjustMax != null) "  (${gears.rearAdjustMin} … +${gears.rearAdjustMax})" else "") } ?: "–",
         )
 
         Spacer(Modifier.height(28.dp))
@@ -78,6 +79,16 @@ fun BikeScreen(bike: Bike, gears: Gears?, onDemo: (Boolean) -> Unit, onCheckUpda
             },
         ) { BodyText(WHEELS.firstOrNull { it.second == wheel }?.first ?: "$wheel mm", weight = FontWeight.SemiBold) }
         Divider()
+        var lang by remember { mutableStateOf(Prefs.lang(ctx)) }
+        SettingRow(tr("Sprache", "Language"), tr("tippen zum Wechseln", "tap to change"), onClick = {
+            lang = when (lang) { null -> "de"; "de" -> "en"; else -> null }
+            Prefs.setLang(ctx, lang)
+            Lang.chosen = lang
+            (ctx as? Activity)?.recreate()
+        }) {
+            BodyText(when (lang) { "de" -> "Deutsch"; "en" -> "English"; else -> tr("wie das Handy", "phone default") }, weight = FontWeight.SemiBold)
+        }
+        Divider()
         var background by remember { mutableStateOf(Prefs.background(ctx)) }
         SettingRow(
             tr("Mit Bildschirm aus weiterzählen", "Keep counting with the screen off"),
@@ -95,12 +106,12 @@ fun BikeScreen(bike: Bike, gears: Gears?, onDemo: (Boolean) -> Unit, onCheckUpda
         Divider()
         SettingRow(tr("Demo-Modus", "Demo mode"), tr("erfundene Fahrt, echte Zahlen bleiben unberührt", "made-up ride, your real numbers stay untouched"), onClick = { onDemo(!bike.demo) }) { Toggle(bike.demo) }
         Divider()
-        SettingRow(tr("Quellcode und Protokoll", "Source code and protocol"), "github.com/BrickyStudios/schaltblick", onClick = {
-            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/BrickyStudios/schaltblick")))
+        SettingRow(tr("Quellcode und Protokoll", "Source code and protocol"), "github.com/BrickyStudios/freehub", onClick = {
+            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/BrickyStudios/freehub")))
         })
         Spacer(Modifier.height(20.dp))
         BodyText(
-            "Schaltblick ${BuildConfig.VERSION_NAME} · GPL-3.0 · " + tr("Nicht von Shimano. Shimano und Di2 sind Marken der SHIMANO INC.", "Not made by Shimano. Shimano and Di2 are trademarks of SHIMANO INC."),
+            "Freehub ${BuildConfig.VERSION_NAME} · GPL-3.0 · " + tr("Nicht von Shimano. Shimano und Di2 sind Marken der SHIMANO INC.", "Not made by Shimano. Shimano and Di2 are trademarks of SHIMANO INC."),
             color = P.faint, size = 13.sp,
         )
         Spacer(Modifier.height(24.dp))

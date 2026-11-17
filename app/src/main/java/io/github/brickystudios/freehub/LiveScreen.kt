@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode
@@ -55,7 +55,7 @@ fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, needsPermission: Boolea
         val g = bike.gears
         when {
             needsPermission -> Welcome(onAllow, onDemo)
-            bike.link == Link.NO_BLUETOOTH -> Hint(tr("Bluetooth ist aus", "Bluetooth is off"), tr("Schaltblick spricht per Bluetooth mit dem Schaltwerk.", "Schaltblick talks to the derailleur over Bluetooth."), tr("Einschalten", "Turn on"), onBluetooth, onDemo)
+            bike.link == Link.NO_BLUETOOTH -> Hint(tr("Bluetooth ist aus", "Bluetooth is off"), tr("Freehub spricht per Bluetooth mit dem Schaltwerk.", "Freehub talks to the derailleur over Bluetooth."), tr("Einschalten", "Turn on"), onBluetooth, onDemo)
             g == null && bike.link != Link.CONNECTED -> Searching(onDemo)
             g == null -> Hint(tr("Verbunden", "Connected"), tr("Schalt einmal, dann schickt das Schaltwerk den Gang.", "Shift once and the derailleur sends the gear."), null, {}, null)
             else -> Cockpit(g, ride, wheelMm, bike.buttons)
@@ -122,8 +122,8 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
 
     val ratio = if (front != null && rear != null) front.toFloat() / rear else null
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Field(ratio?.let { "%.2f".format(it) } ?: "–", tr("Übersetzung", "Ratio"), Modifier.weight(1f))
-        Field(ratio?.let { "%.2f m".format(it * wheelMm / 1000f) } ?: "–", tr("Entfaltung", "Development"), Modifier.weight(1f))
+        Field(ratio?.let { "%.2f".fmt(it) } ?: "–", tr("Übersetzung", "Ratio"), Modifier.weight(1f))
+        Field(ratio?.let { "%.2f m".fmt(it * wheelMm / 1000f) } ?: "–", tr("Entfaltung", "Development"), Modifier.weight(1f))
         Field(modeShort(g.mode), tr("Schaltmodus", "Shift mode"), Modifier.weight(1f))
     }
     Spacer(Modifier.height(20.dp))
@@ -231,7 +231,7 @@ private fun Searching(onDemo: () -> Unit) {
     Num(tr("Einmal schalten.", "Shift once."), 44.sp)
     Spacer(Modifier.height(10.dp))
     BodyText(
-        tr("Das Schaltwerk schläft, wenn das Rad steht. Ein Klick am Hebel weckt es, dann verbindet sich Schaltblick von selbst.", "The derailleur sleeps while the bike stands still. One click on a lever wakes it, then Schaltblick connects on its own."),
+        tr("Das Schaltwerk schläft, wenn das Rad steht. Ein Klick am Hebel weckt es, dann verbindet sich Freehub von selbst.", "The derailleur sleeps while the bike stands still. One click on a lever wakes it, then Freehub connects on its own."),
         color = P.muted, size = 17.sp,
     )
     Spacer(Modifier.height(24.dp))

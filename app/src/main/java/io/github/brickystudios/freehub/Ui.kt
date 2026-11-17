@@ -1,4 +1,4 @@
-package io.github.brickystudios.schaltblick
+package io.github.brickystudios.freehub
 
 import android.content.Context
 import androidx.compose.foundation.background
@@ -36,8 +36,18 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import java.util.Locale
 
-/** German phones get German, everyone else English. */
-fun tr(de: String, en: String) = if (Locale.getDefault().language == "de") de else en
+/** The app's language: null follows the phone (German phones get German, all others English). */
+object Lang {
+    var chosen: String? = null
+    fun init(c: Context) { chosen = Prefs.lang(c) }
+}
+
+fun locale(): Locale = Lang.chosen?.let(Locale::forLanguageTag) ?: Locale.getDefault()
+
+fun tr(de: String, en: String) = if (locale().language == "de") de else en
+
+/** numbers in the app's language: 3,33 in German, 3.33 in English */
+fun String.fmt(vararg args: Any?): String = String.format(locale(), this, *args)
 
 /** Colours as tokens. Accent is Maglia pink: the Giro's leader jersey, not a brand colour of anyone's. */
 data class Palette(
@@ -76,7 +86,7 @@ val Body = FontFamily(
 )
 
 @Composable
-fun SchaltblickTheme(content: @Composable () -> Unit) {
+fun FreehubTheme(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalPalette provides if (isSystemInDarkTheme()) Carbon else Paper, content = content)
 }
 
@@ -174,6 +184,8 @@ object Prefs {
     fun setWheel(c: Context, mm: Int) = p(c).edit().putInt("wheel", mm).apply()
     fun background(c: Context) = p(c).getBoolean("background", true)
     fun setBackground(c: Context, on: Boolean) = p(c).edit().putBoolean("background", on).apply()
+    fun lang(c: Context) = p(c).getString("lang", null)
+    fun setLang(c: Context, lang: String?) = p(c).edit().putString("lang", lang).apply()
     fun updates(c: Context) = p(c).getBoolean("updates", true)
     fun setUpdates(c: Context, on: Boolean) = p(c).edit().putBoolean("updates", on).apply()
 
@@ -189,10 +201,10 @@ fun duration(ms: Long): String {
     val min = ms / 60_000
     return when {
         min < 60 -> "$min min"
-        min < 600 -> "%d:%02d h".format(min / 60, min % 60)
+        min < 600 -> "%d:%02d h".fmt(min / 60, min % 60)
         else -> "${count(min / 60)} h"
     }
 }
 
 /** 1234 → "1.234" in German, "1,234" in English */
-fun count(n: Long): String = String.format(Locale.getDefault(), "%,d", n)
+fun count(n: Long): String = "%,d".fmt(n)

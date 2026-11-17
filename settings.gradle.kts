@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Schaltblick"
+rootProject.name = "Freehub"
 include(":app")
