@@ -46,7 +46,7 @@ class EtubeTest {
 
     @Test fun probeSweepHasDistinctLabelsAndWellFormedCommands() {
         val reads = Etube.PROBE_READS
-        assertTrue(reads.size >= 10)
+        assertTrue(reads.size >= 5)
         assertEquals(reads.size, reads.map { it.first }.toSet().size) // labels are unique
         reads.forEach { (_, bytes) ->
             assertEquals(0x13.toByte(), bytes[1]) // every command uses the 0x13 unit-command opcode

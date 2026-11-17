@@ -55,16 +55,16 @@ object Etube {
     fun setShiftMode(manual: Boolean) = unitCommand(0, 0x0B, 0xF8, if (manual) 1 else 0, 0)
 
     /**
-     * The developer probe sweep. Firmware and unit count answered at slot 0, but the config reads did not —
-     * most likely because E-TUBE addresses each unit by its own slot. So this sweeps the units' slots: firmware
-     * at slots 0–5 shows which slots hold a unit, and the shift (synchro) config at slots 0–5 shows which unit
-     * owns it. One capture finds the addressing; then every read targets the right slot.
+     * The developer probe sweep. The slot byte turned out not to matter (slots 0–5 answered the same), so the
+     * empty config reads were the wrong **parameters**, not the wrong slot: the synchro read had `fdPosition = 0`,
+     * but E-TUBE's `getSynchro(mode, direction, fdPosition)` callers use `fdPosition ≥ 1` (mode 0 or 16, direction
+     * 0 or 1), building `{ mode | direction, fdPosition, 0, 0 }`. This sweeps those real combinations to see
+     * whether the shift config finally answers with data; firmware is kept as a known-good control.
      */
     val PROBE_READS: List<Pair<String, ByteArray>> = buildList {
-        for (s in 0..5) add("fw@$s" to unitCommand(s, 0x01, 0x2C, 0))              // which slots hold a unit
-        for (s in 0..5) add("synchro@$s" to unitCommand(s, 0x32, 0xAC, 0, 0, 0, 0)) // which slot owns the shift config
-        for (s in 0..5) add("value@$s" to unitCommand(s, 0x32, 0x84, 0))           // the general value reader, per slot
-        add("unit-count" to unitCommand(0, 0x01, 0x94, 0))                          // control: known to answer
+        add("fw" to unitCommand(0, 0x01, 0x2C, 0)) // control: known to answer with data
+        for (fd in 1..2) for (mode in listOf(0x00, 0x10)) for (dir in 0..1)
+            add("sync m$mode d$dir fd$fd" to unitCommand(0, 0x32, 0xAC, mode or dir, fd, 0, 0))
     }
 
     /**
