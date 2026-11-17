@@ -319,9 +319,9 @@ object Di2 {
     private var memoryPackets = 0
     private var memoryListening = false
     private const val MEMORY_STEP_MS = 6_000L
-    private const val MEMORY_LISTEN_MS = 16_000L
-    /** gap between the candidate gear-usage requests, so each one's reply lands under its own label */
-    private const val MEMORY_PROBE_STEP_MS = 4_000L
+    private const val MEMORY_LISTEN_MS = 17_000L
+    /** gap between the per-sequence gear-usage requests, so each reply lands under its own label */
+    private const val MEMORY_SEQ_STEP_MS = 1_000L
 
     fun readMemory() {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
@@ -353,15 +353,13 @@ object Di2 {
         endMemory(tr("Fertig: $memoryPackets Pakete empfangen. Jetzt Mitschnitt teilen.", "Done: $memoryPackets packets received. Now share the capture."))
     }
 
-    /** Sends gear-usage request candidate [i], then schedules the next; the capture shows which one streams. */
-    private fun sendProbe(i: Int) {
-        if (!memoryPending) return
-        val probes = Etube.GEAR_USAGE_PROBES
-        val (label, bytes) = probes.getOrNull(i) ?: return
-        DevLog.note("gear-usage probe: $label")
-        write(Etube.SERVICE, Etube.PCE_COMMAND, bytes)
+    /** Asks for gear-usage sequence [seq], then schedules the next; one reply comes per request. */
+    private fun sendGearSeq(seq: Int) {
+        if (!memoryPending || seq > Etube.GEAR_USAGE_MAX_SEQ) return
+        DevLog.note("gear-usage seq $seq")
+        write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.gearUsage(seq))
         kick()
-        if (i + 1 < probes.size) main.postDelayed({ sendProbe(i + 1) }, MEMORY_PROBE_STEP_MS)
+        main.postDelayed({ sendGearSeq(seq + 1) }, MEMORY_SEQ_STEP_MS)
     }
 
     /** Ends the memory read and reconnects, because the unit stays in command mode otherwise. */
@@ -391,7 +389,7 @@ object Di2 {
                     memoryListening = true
                     memory.value = tr("Angemeldet, lese Gangnutzung …", "Logged in, reading gear usage …")
                     write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
-                    sendProbe(0)
+                    sendGearSeq(1)
                     main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
                 }
             }

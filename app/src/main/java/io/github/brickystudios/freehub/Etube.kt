@@ -37,31 +37,20 @@ object Etube {
     /** after login: E-TUBE (and BikeBridge) switch the unit to command mode; live gear reports pause until reconnect */
     val COMMAND_MODE = hex("ff00")
 
-    /**
-     * E-TUBE's frame check: low byte of (sum of the bytes + 1), as `Common.createFcs` in E-TUBE PROJECT.
-     */
-    fun fcs(bytes: ByteArray): Byte = (bytes.sumOf { it.toInt() and 0xFF } + 1).toByte()
+    /** group `0x33` echoed in byte 1 of a real gear-usage reply (`33 33 …`); `33 01 …` is only a status packet */
+    const val GEAR_USAGE_REPLY_GROUP = 0x33
+
+    /** sequences a 2×12 reports: front-low 1–6, front-top 7–12, overflow 13; a rear derailleur alone uses 1–7 */
+    const val GEAR_USAGE_MAX_SEQ = 13
 
     /**
-     * A DCAS frame: control byte 0x48, the body, then the FCS. E-TUBE wraps unit commands this way
-     * (`sendDcasRawPacketCommand` → `writeData(72)` → `createFrame`). `createFrame` did not decompile,
-     * so a trailing end byte may be missing; the capture tells.
+     * The gear-usage read, in the framing a real RD-R7150 accepted — BikeBridge's unit-command opcode `0x13`:
+     * slot `0x00`, write opcode `0x13`, group `0x33`, command `0x04`, log 0, this sequence, transfer mode 1.
+     * The derailleur replies on `0x2AF9` as `33 33 …` (group `0x33` echoed). At the bike the raw command only
+     * drew a status packet (`33 01 …`) and the DCAS `0x48` frame drew no reply, so those are dropped. One reply
+     * comes per request, so Freehub walks the sequences 1…[GEAR_USAGE_MAX_SEQ].
      */
-    fun dcasFrame(body: ByteArray): ByteArray = (byteArrayOf(0x48) + body).let { it + fcs(it) }
-
-    /**
-     * The gear-usage read (group 0x33, command 0x04, then log 0, sequence 1, transfer mode 1 = high speed).
-     * The exact framing on 0x2AFA is still open: E-TUBE wraps it in a DCAS frame, BikeBridge writes unit
-     * commands to the same characteristic as `00 13 <group> <command> <params>` with no frame, and Freehub's
-     * first tries sent the bytes raw and only got a status packet back. The dev memory read sends each of these
-     * candidates in turn and logs what comes back, so one capture shows which one makes the derailleur stream.
-     */
-    private val GEAR_USAGE_BODY = hex("003304000101") // slot 0x00, group 0x33, cmd 0x04, log 0, seq 1, high speed
-    val GEAR_USAGE_PROBES: List<Pair<String, ByteArray>> = listOf(
-        "unit13" to hex("00133304000101"), // BikeBridge-style: slot 0x00, write opcode 0x13, then group/cmd/params
-        "dcas48" to dcasFrame(GEAR_USAGE_BODY),                          // E-TUBE's DCAS control byte + FCS
-        "raw" to GEAR_USAGE_BODY,                                        // what Freehub sent until now (baseline)
-    )
+    fun gearUsage(seq: Int) = hex("00133304") + byteArrayOf(0, seq.toByte(), 1)
 
     /** Passkeys are six digits; anything else read from the unit is not one. */
     fun passkeyOrDefault(raw: ByteArray?): String =
