@@ -54,17 +54,42 @@ object Etube {
      */
     fun setShiftMode(manual: Boolean) = unitCommand(0, 0x0B, 0xF8, if (manual) 1 else 0, 0)
 
+    private fun fcs(bytes: ByteArray) = (bytes.sumOf { it.toInt() and 0xFF } + 1) and 0xFF
+
+    /** Byte-stuff a DCAS body: the flag 0xBB and escape 0xBD become `0xBD, (b xor 0x20)`. */
+    private fun stuff(bytes: ByteArray): ByteArray {
+        val out = ArrayList<Byte>(bytes.size + 2)
+        for (b in bytes) {
+            val u = b.toInt() and 0xFF
+            if (u == 0xBB || u == 0xBD) { out.add(0xBD.toByte()); out.add((u xor 0x20).toByte()) } else out.add(b)
+        }
+        return out.toByteArray()
+    }
+
     /**
-     * The developer probe sweep. The slot byte turned out not to matter (slots 0–5 answered the same), so the
-     * empty config reads were the wrong **parameters**, not the wrong slot: the synchro read had `fdPosition = 0`,
-     * but E-TUBE's `getSynchro(mode, direction, fdPosition)` callers use `fdPosition ≥ 1` (mode 0 or 16, direction
-     * 0 or 1), building `{ mode | direction, fdPosition, 0, 0 }`. This sweeps those real combinations to see
-     * whether the shift config finally answers with data; firmware is kept as a known-good control.
+     * A DCAS frame — how E-TUBE actually sends every unit command (per the Opus review of the decompiled helpers;
+     * `createFrame` itself did not decompile, so this is reconstructed): flag `0xBB`, then the byte-stuffed body
+     * `[controlInfo 0x48, slot, group, command, params…, FCS]` where FCS = `(sum + 1) & 0xFF`, then flag `0xBB`.
+     * This is the transport the config reads need; the plain `0x13` form reaches only the system responder (group 01).
+     */
+    fun dcasCommand(slot: Int, group: Int, command: Int, vararg params: Int): ByteArray {
+        val body = byteArrayOf(0x48, slot.toByte(), group.toByte(), command.toByte()) + ByteArray(params.size) { params[it].toByte() }
+        return byteArrayOf(0xBB.toByte()) + stuff(body + fcs(body).toByte()) + 0xBB.toByte()
+    }
+
+    /**
+     * The developer probe sweep. Opus review: E-TUBE wraps **every** command in a DCAS frame (control byte 0x48,
+     * 0xBB flags, FCS) — the `0x13` form only reaches a system responder that owns group 01, which is why only
+     * firmware and unit count answered. The decisive test: the same known-good firmware read, once as `0x13`
+     * (answers) and once as a real DCAS frame — if the DCAS one answers too, the config reads follow the same way.
      */
     val PROBE_READS: List<Pair<String, ByteArray>> = buildList {
-        add("fw" to unitCommand(0, 0x01, 0x2C, 0)) // control: known to answer with data
-        for (fd in 1..2) for (mode in listOf(0x00, 0x10)) for (dir in 0..1)
-            add("sync m$mode d$dir fd$fd" to unitCommand(0, 0x32, 0xAC, mode or dir, fd, 0, 0))
+        add("fw-13" to unitCommand(0, 0x01, 0x2C, 0))           // control: known to answer with data
+        add("fw-dcas" to dcasCommand(0, 0x01, 0x2C, 0))         // same command, real DCAS framing — the decisive test
+        add("sync-dcas m16 d0 fd1" to dcasCommand(0, 0x32, 0xAC, 0x10, 1, 0, 0))
+        add("sync-dcas m0 d0 fd1" to dcasCommand(0, 0x32, 0xAC, 0x00, 1, 0, 0))
+        add("gear-dcas" to dcasCommand(0, 0x33, 0x04, 0, 1, 1))
+        add("date-dcas" to dcasCommand(0, 0x4A, 0x04, 0))
     }
 
     /**

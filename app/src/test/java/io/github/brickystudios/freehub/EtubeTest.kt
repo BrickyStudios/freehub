@@ -44,13 +44,18 @@ class EtubeTest {
         assertEquals("00 13 0b f8 00 00", Etube.setShiftMode(false).hex())
     }
 
-    @Test fun probeSweepHasDistinctLabelsAndWellFormedCommands() {
+    @Test fun dcasFrameMatchesReconstruction() {
+        // DCAS: flag 0xBB, [control 0x48, slot, group, cmd, params, FCS=(sum+1)&0xFF], flag 0xBB
+        // firmware 01/2C, slot 0, param 0: sum(48 00 01 2c 00)=0x75, +1=0x76
+        assertEquals("bb 48 00 01 2c 00 76 bb", Etube.dcasCommand(0, 0x01, 0x2C, 0).hex())
+        // synchro 32/AC, mode16 dir0 fd1: sum(48 00 32 ac 10 01 00 00)=0x37, +1=0x38
+        assertEquals("bb 48 00 32 ac 10 01 00 00 38 bb", Etube.dcasCommand(0, 0x32, 0xAC, 0x10, 1, 0, 0).hex())
+    }
+
+    @Test fun probeSweepHasDistinctLabels() {
         val reads = Etube.PROBE_READS
         assertTrue(reads.size >= 5)
         assertEquals(reads.size, reads.map { it.first }.toSet().size) // labels are unique
-        reads.forEach { (_, bytes) ->
-            assertEquals(0x13.toByte(), bytes[1]) // every command uses the 0x13 unit-command opcode
-        }
     }
 
     @Test fun characteristicShortNames() {
