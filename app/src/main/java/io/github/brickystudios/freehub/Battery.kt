@@ -62,22 +62,24 @@ object Power {
     private const val MAX = 2_000
 
     val log = MutableStateFlow<List<Charge>>(emptyList())
-    private lateinit var file: File
+    /** this bike's battery log; null while no bike is paired */
+    private var file: File? = null
 
-    fun init(ctx: Context) {
-        if (::file.isInitialized) return
-        file = File(ctx.filesDir, "battery.json")
-        log.value = runCatching { Range.fromJson(file.readText()) }.getOrDefault(emptyList())
+    /** Switches to a bike's battery log (see [Garage]). */
+    fun open(ctx: Context, key: String?) {
+        file = key?.let { File(ctx.filesDir, "battery-$it.json") }
+        log.value = file?.let { f -> runCatching { Range.fromJson(f.readText()) }.getOrNull() } ?: emptyList()
     }
 
     /** Logged only when the level or the odometer moved, so the file stays small. */
     fun record(percent: Int, km: Double?, now: Long = System.currentTimeMillis()) {
-        if (!::file.isInitialized || percent !in 0..100) return
+        val f = file ?: return
+        if (percent !in 0..100) return
         val last = log.value.lastOrNull()
         if (last != null && last.percent == percent && (km == null || km == last.km)) return
         log.value = (log.value + Charge(now, percent, km)).takeLast(MAX)
-        val tmp = File(file.path + ".tmp")
+        val tmp = File(f.path + ".tmp")
         tmp.writeText(Range.toJson(log.value))
-        tmp.renameTo(file)
+        tmp.renameTo(f)
     }
 }

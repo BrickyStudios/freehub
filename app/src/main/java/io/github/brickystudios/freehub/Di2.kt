@@ -26,6 +26,9 @@ import kotlinx.coroutines.flow.update
 
 enum class Link { OFF, NO_BLUETOOTH, SEARCHING, CONNECTING, CONNECTED }
 
+/** A derailleur seen while pairing: not connected, only heard. rssi in dBm, higher = closer. */
+data class Nearby(val address: String, val name: String?, val rssi: Int, val at: Long)
+
 data class Bike(
     val link: Link = Link.OFF,
     val name: String? = null,
@@ -61,8 +64,48 @@ object Di2 {
     fun start(ctx: Context) {
         app = ctx.applicationContext
         if (bike.value.demo) return
+        // nothing paired yet: never grab a derailleur on our own, the rider picks theirs first
+        if (Garage.bikes.value.isEmpty()) {
+            bike.update { it.copy(link = Link.OFF) }
+            return
+        }
         wanted = true
         if (gatt == null && !scanning) scan()
+    }
+
+    /** the derailleur Freehub is connected to, if any */
+    val connectedAddress: String? get() = gatt?.device?.address
+
+    /** After a bike was removed: drop the link if it was that one, and look for the others. */
+    fun forget(ctx: Context, address: String) {
+        if (connectedAddress == address || Garage.bikes.value.isEmpty()) stop()
+        start(ctx)
+    }
+
+    // ---- pairing: list every derailleur in range, connect to none of them ----
+
+    val nearby = MutableStateFlow<Map<String, Nearby>>(emptyMap())
+    private var discovering = false
+
+    fun discover(ctx: Context, on: Boolean) {
+        app = ctx.applicationContext
+        val scanner = adapter?.takeIf { it.isEnabled }?.bluetoothLeScanner ?: return
+        if (on == discovering) return
+        discovering = on
+        if (on) {
+            nearby.value = emptyMap()
+            val filters = listOf(ScanFilter.Builder().setServiceUuid(ParcelUuid(Sbi.SERVICE)).build())
+            val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+            runCatching { scanner.startScan(filters, settings, discoverCallback) }.onFailure { discovering = false }
+        } else runCatching { scanner.stopScan(discoverCallback) }
+    }
+
+    private val discoverCallback = object : ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            val a = result.device.address
+            val n = Nearby(a, result.scanRecord?.deviceName ?: nearby.value[a]?.name, result.rssi, System.currentTimeMillis())
+            main.post { nearby.update { it + (a to n) } }
+        }
     }
 
     /** Disconnects and stops looking. */
@@ -106,7 +149,11 @@ object Di2 {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             if (!scanning) return
+            val address = result.device.address
+            // a derailleur that is not paired (a brother's bike of the same model next to it): leave it alone
+            if (!Garage.isKnown(address)) return
             stopScan()
+            main.post { Garage.select(address) }
             connect(result.device, result.scanRecord?.deviceName)
         }
 

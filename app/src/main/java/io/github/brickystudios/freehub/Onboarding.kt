@@ -41,7 +41,8 @@ private enum class Step { WELCOME, BLUETOOTH, CONNECT, DRIVETRAIN, AUTO, GPS, DO
 @Composable
 fun Onboarding(
     bike: Bike, gears: Gears?, granted: Boolean, autoStart: Boolean?, loc: Loc,
-    onAllow: () -> Unit, onBluetooth: () -> Unit, onAutoStart: (Boolean) -> Unit, onLocation: () -> Unit, onDone: () -> Unit,
+    onAllow: () -> Unit, onBluetooth: () -> Unit, onAutoStart: (Boolean) -> Unit, onLocation: () -> Unit,
+    paired: Boolean, onPaired: (Profile) -> Unit, onDone: () -> Unit,
 ) {
     val steps = Step.entries.filter { it != Step.AUTO || autoStart != null }
     var i by rememberSaveable { mutableIntStateOf(0) }
@@ -77,7 +78,14 @@ fun Onboarding(
                             "Freehub talks to the derailleur over Bluetooth. Notifications keep the counting going while the phone sits in your jersey pocket.",
                         ))
                     }
-                    Step.CONNECT -> {
+                    Step.CONNECT -> if (!paired && bike.link != Link.NO_BLUETOOTH) {
+                        Title(tr("Dein Rad koppeln", "Pair your bike"))
+                        Text(tr(
+                            "Schalt einmal an deinem Rad und tippe sein Schaltwerk an. Freehub verbindet sich danach nur noch mit gekoppelten Rädern, ein gleiches Rad daneben bleibt unberührt.",
+                            "Shift once on your bike and tap its derailleur. From then on Freehub only connects to paired bikes; the same bike next to it stays untouched.",
+                        ))
+                        PairList(onPaired)
+                    } else {
                         Title(if (bike.link == Link.CONNECTED) tr("Verbunden.", "Connected.") else tr("Einmal schalten.", "Shift once."))
                         Text(
                             when (bike.link) {
@@ -134,7 +142,7 @@ fun Onboarding(
             Step.CONNECT -> when (bike.link) {
                 Link.CONNECTED -> tr("Weiter", "Next") to { next() }
                 Link.NO_BLUETOOTH -> tr("Bluetooth einschalten", "Turn on Bluetooth") to onBluetooth
-                else -> tr("Später verbinden", "Connect later") to { next() }
+                else -> (if (paired) tr("Später verbinden", "Connect later") else tr("Später koppeln", "Pair later")) to { next() }
             }
             Step.GPS -> when (loc) {
                 Loc.NONE -> tr("Standort erlauben", "Allow location") to onLocation
@@ -146,7 +154,9 @@ fun Onboarding(
             else -> tr("Weiter", "Next") to { next() }
         }
         Action(button.first, Modifier.fillMaxWidth(), onClick = button.second)
-        if (step !in setOf(Step.WELCOME, Step.DONE)) {
+        // where the main button already says "later", a second skip button would do the same thing
+        val waiting = step == Step.CONNECT && bike.link != Link.CONNECTED && bike.link != Link.NO_BLUETOOTH
+        if (step !in setOf(Step.WELCOME, Step.DONE) && !waiting) {
             Spacer(Modifier.height(10.dp))
             Action(tr("Überspringen", "Skip"), Modifier.fillMaxWidth(), primary = false) { next() }
         }

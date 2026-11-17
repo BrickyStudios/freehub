@@ -40,8 +40,7 @@ class RideService : Service() {
         Lang.init(this)
         if (intent?.action == AUTO) {
             // woken by Android with Freehub closed: set up what the app would, then look for the derailleur
-            Counter.init(this)
-            Power.init(this)
+            Garage.init(this)
             DevLog.on = Prefs.dev(this)
             Di2.start(this)
             // the derailleur showed up but no ride came of it (someone moved the bike): give up quietly

@@ -90,8 +90,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         Lang.init(this)
-        Counter.init(this)
-        Power.init(this)
+        Garage.init(this)
         // Strava is gone since 0.5: drop the stored client secret and tokens instead of leaving them behind
         deleteSharedPreferences("strava")
         DevLog.on = Prefs.dev(this)
@@ -138,6 +137,15 @@ class MainActivity : ComponentActivity() {
         val update by Updater.state.collectAsStateWithLifecycle()
         val note by Updater.note.collectAsStateWithLifecycle()
         val power by Power.log.collectAsStateWithLifecycle()
+        val bikes by Garage.bikes.collectAsStateWithLifecycle()
+        val active by Garage.active.collectAsStateWithLifecycle()
+        val profile = bikes.firstOrNull { it.address == active }
+        val onPaired: (Profile) -> Unit = { if (granted) Di2.start(ctx) }
+        val onRemove: (Profile) -> Unit = { p ->
+            Garage.remove(p.address)
+            if (canAutoStart) AutoStart.forget(ctx, p.address)
+            Di2.forget(ctx, p.address)
+        }
         // the tabs sit side by side: swipe left or right, or tap the bar
         val pager = rememberPagerState { 3 }
         val tab = pager.currentPage
@@ -160,6 +168,8 @@ class MainActivity : ComponentActivity() {
                 onBluetooth = { askBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
                 onAutoStart = ::switchAutoStart,
                 onLocation = ::requestLocation,
+                paired = bikes.isNotEmpty(),
+                onPaired = onPaired,
                 onDone = { Prefs.setOnboarded(ctx, true); onboarded = true },
             )
             return
@@ -173,12 +183,13 @@ class MainActivity : ComponentActivity() {
                 HorizontalPager(pager, Modifier.fillMaxSize().statusBarsPadding(), beyondViewportPageCount = 1) { page ->
                     when (page) {
                         0 -> LiveScreen(
-                            bike, ride, Prefs.wheel(ctx), km, power, needsPermission = !granted && !bike.demo,
+                            bike, profile, bikes.isNotEmpty(), ride, Prefs.wheel(ctx), km, power, needsPermission = !granted && !bike.demo,
                             onAllow = { askPermissions.launch(permissions()) },
                             onBluetooth = { askBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
                             onDemo = { Demo.start(lifecycleScope) },
+                            onPaired = onPaired,
                         )
-                        1 -> StatsScreen(totals, ride, known, km, onReset = Counter::reset)
+                        1 -> StatsScreen(totals, ride, known, km, profile?.name.takeIf { !bike.demo }, onReset = Counter::reset)
                         else -> BikeScreen(
                             bike, known, km, power, loc, onLocation = ::requestLocation,
                             autoStart = autoStart.takeIf { canAutoStart && granted },
@@ -187,6 +198,7 @@ class MainActivity : ComponentActivity() {
                             onCheckUpdate = { scope.launch { Updater.check(ctx, manual = true) } },
                             updateNote = note,
                             onSetup = { Prefs.setOnboarded(ctx, false); onboarded = false },
+                            profile = profile, bikes = bikes, onPaired = onPaired, onRemove = onRemove,
                         )
                     }
                 }

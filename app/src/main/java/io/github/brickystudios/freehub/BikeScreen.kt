@@ -38,13 +38,22 @@ fun BikeScreen(
     bike: Bike, gears: Gears?, km: Double?, power: List<Charge>, loc: Loc, onLocation: () -> Unit,
     autoStart: Boolean?, onAutoStart: (Boolean) -> Unit,
     onDemo: (Boolean) -> Unit, onCheckUpdate: () -> Unit, updateNote: String?, onSetup: () -> Unit,
+    profile: Profile?, bikes: List<Profile>, onPaired: (Profile) -> Unit, onRemove: (Profile) -> Unit,
 ) {
     val ctx = LocalContext.current
     val when_ = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale()) }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 20.dp)) {
-        Label(tr("Schaltwerk", "Derailleur"))
-        Num(model(bike.name) ?: tr("Nicht verbunden", "Not connected"), 52.sp)
-        Spacer(Modifier.height(12.dp))
+        Label(model(bike.name ?: profile?.model)?.let { it + (unitNumber(bike.name ?: profile?.model)?.let { n -> " · $n" } ?: "") } ?: tr("Rad", "Bike"))
+        Num(if (bike.demo) "Demo" else profile?.name ?: tr("Kein Rad gekoppelt", "No bike paired"), 52.sp)
+        BodyText(
+            when {
+                bike.demo -> tr("erfundene Fahrt", "made-up ride")
+                bike.link == Link.CONNECTED -> tr("verbunden", "connected")
+                else -> tr("nicht verbunden", "not connected")
+            },
+            color = if (bike.link == Link.CONNECTED) P.accent else P.muted, size = 15.sp,
+        )
+        Spacer(Modifier.height(16.dp))
         val last = power.lastOrNull()
         val level = bike.battery ?: last?.percent
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -52,6 +61,8 @@ fun BikeScreen(
             Field(level?.let { approxKm(Range.remainingKm(it, power)) } ?: "–", tr("Reicht noch", "Range left"), Modifier.weight(1f))
             Field(bike.firmware ?: "–", "Firmware", Modifier.weight(1f))
         }
+
+        if (!bike.demo) GarageSection(profile, bikes, onPaired, onRemove)
 
         Spacer(Modifier.height(28.dp))
         Label(tr("Akku", "Battery"))
@@ -74,7 +85,7 @@ fun BikeScreen(
         Label(tr("Antrieb", "Drivetrain"))
         Spacer(Modifier.height(4.dp))
         Info(tr("Seriennummer", "Serial number"), bike.serial ?: "–")
-        DrivetrainPicker(bike, gears)
+        if (profile != null || bike.demo) DrivetrainPicker(bike, gears) // per bike: nothing to save it to before pairing
         Info(tr("Schaltmodus", "Shift mode"), gears?.let { modeName(it.mode) } ?: "–")
         Info(tr("Multi-Shift-Intervall", "Multi-shift interval"), gears?.multiShiftInterval?.toString() ?: "–")
         Info(
@@ -188,8 +199,9 @@ internal fun DrivetrainPicker(bike: Bike, gears: Gears?) {
         return
     }
     val reported = remember(bike.link) { Prefs.reportedGears(ctx) }
-    var rings by remember { mutableIntStateOf(Prefs.rings(ctx)) }
-    var cogs by remember { mutableIntStateOf(Prefs.cogs(ctx)) }
+    val active by Garage.active.collectAsStateWithLifecycle()
+    var rings by remember(active) { mutableIntStateOf(Prefs.rings(ctx)) }
+    var cogs by remember(active) { mutableIntStateOf(Prefs.cogs(ctx)) }
     fun note(picked: Boolean) = if (picked) tr("von Hand gewählt · tippen zum Wechseln", "picked by hand · tap to change")
     else tr("vom Schaltwerk · tippen, falls falsch", "from the derailleur · tap if wrong")
     // -1 first: back to what the derailleur says
@@ -210,6 +222,45 @@ internal fun DrivetrainPicker(bike: Bike, gears: Gears?) {
 }
 
 private fun cassette(t: List<Int>) = "${t.first()}–${t.last()} · ${t.size}-" + tr("fach", "speed")
+
+/**
+ * The paired bikes: switch, rename, remove, pair another. Freehub connects to these only;
+ * when one of them wakes up, the screens switch to it on their own.
+ */
+@Composable
+private fun GarageSection(profile: Profile?, bikes: List<Profile>, onPaired: (Profile) -> Unit, onRemove: (Profile) -> Unit) {
+    val riding = Counter.now.collectAsStateWithLifecycle().value != null
+    var adding by remember { mutableStateOf(bikes.isEmpty()) }
+    var confirm by remember(profile?.address) { mutableStateOf(false) }
+    Spacer(Modifier.height(24.dp))
+    Label(tr("Räder", "Bikes"))
+    Spacer(Modifier.height(4.dp))
+    bikes.forEach { b ->
+        val on = b.address == profile?.address
+        SettingRow(
+            b.name,
+            (model(b.model) ?: "Di2") + (unitNumber(b.model)?.let { " · $it" } ?: ""),
+            onClick = if (on || riding) null else ({ Garage.select(b.address) }),
+        ) { if (on) BodyText(tr("angezeigt", "shown"), color = P.accent, weight = FontWeight.SemiBold) }
+        Divider()
+    }
+    if (profile != null) {
+        var name by remember(profile.address) { mutableStateOf(profile.name) }
+        Input(name, { name = it.take(30); if (name.isNotBlank()) Garage.update { p -> p.copy(name = name.trim()) } }, tr("Name", "Name"))
+        if (!confirm) Action(tr("Dieses Rad entfernen", "Remove this bike"), Modifier.padding(top = 8.dp), primary = false) { confirm = true }
+        else {
+            BodyText(tr("${profile.name} und alle seine Fahrten löschen?", "Delete ${profile.name} and all its rides?"), Modifier.padding(top = 8.dp), color = P.warn)
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Action(tr("Löschen", "Delete"), Modifier.weight(1f)) { confirm = false; onRemove(profile) }
+                Action(tr("Abbrechen", "Cancel"), Modifier.weight(1f), primary = false) { confirm = false }
+            }
+        }
+    }
+    if (riding) BodyText(tr("Während einer Fahrt bleibt das Rad fest.", "The bike stays put during a ride."), Modifier.padding(top = 8.dp), color = P.faint, size = 14.sp)
+    Spacer(Modifier.height(12.dp))
+    if (!adding) Action(tr("Weiteres Rad koppeln", "Pair another bike"), Modifier.fillMaxWidth(), primary = false) { adding = true }
+    else Panel { PairList { adding = false; onPaired(it) } }
+}
 
 /** Developer options: share the capture, read every value, try the derailleur's own memory. */
 @Composable
@@ -287,7 +338,8 @@ internal fun Kilometres(km: Double?, loc: Loc, onLocation: () -> Unit) {
 @Composable
 internal fun TyreRow() {
     val ctx = LocalContext.current
-    var wheel by remember { mutableIntStateOf(Prefs.wheel(ctx)) }
+    val active by Garage.active.collectAsStateWithLifecycle()
+    var wheel by remember(active) { mutableIntStateOf(Prefs.wheel(ctx)) }
     SettingRow(
         tr("Reifen", "Tyre"),
         tr("für die Entfaltung · tippen zum Wechseln", "for development · tap to change"),

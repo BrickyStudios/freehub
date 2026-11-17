@@ -47,14 +47,27 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, km: Double?, power: List<Charge>, needsPermission: Boolean, onAllow: () -> Unit, onBluetooth: () -> Unit, onDemo: () -> Unit) {
+fun LiveScreen(bike: Bike, profile: Profile?, paired: Boolean, ride: RideNow?, wheelMm: Int, km: Double?, power: List<Charge>, needsPermission: Boolean, onAllow: () -> Unit, onBluetooth: () -> Unit, onDemo: () -> Unit, onPaired: (Profile) -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)) {
-        StatusLine(bike)
+        StatusLine(bike, profile)
         Spacer(Modifier.height(20.dp))
         val g = bike.gears
         when {
             needsPermission -> Welcome(onAllow, onDemo)
             bike.link == Link.NO_BLUETOOTH -> Hint(tr("Bluetooth ist aus", "Bluetooth is off"), tr("Freehub spricht per Bluetooth mit dem Schaltwerk.", "Freehub talks to the derailleur over Bluetooth."), tr("Einschalten", "Turn on"), onBluetooth, onDemo)
+            !paired && !bike.demo -> {
+                Num(tr("Koppel dein Rad.", "Pair your bike."), 44.sp)
+                Spacer(Modifier.height(10.dp))
+                BodyText(
+                    tr(
+                        "Freehub verbindet sich nur mit Rädern, die du hier koppelst. So greift es nie ein fremdes Schaltwerk, auch nicht das vom gleichen Rad daneben.",
+                        "Freehub only connects to bikes you pair here. So it never grabs someone else's derailleur, not even one from the same bike right next to it.",
+                    ),
+                    color = P.muted, size = 17.sp,
+                )
+                Spacer(Modifier.height(16.dp))
+                PairList(onPaired)
+            }
             g == null && bike.link != Link.CONNECTED -> Searching(onDemo)
             g == null -> Hint(tr("Verbunden", "Connected"), tr("Schalt einmal, dann schickt das Schaltwerk den Gang.", "Shift once and the derailleur sends the gear."), null, {}, null)
             else -> Cockpit(g, ride, wheelMm, bike.buttons, bike.battery, bike.battery?.let { Range.remainingKm(it, power) }, km)
@@ -64,9 +77,9 @@ fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, km: Double?, power: Lis
 }
 
 @Composable
-private fun StatusLine(bike: Bike) {
+private fun StatusLine(bike: Bike, profile: Profile?) {
     val (color, text) = when (bike.link) {
-        Link.CONNECTED -> P.accent to (bike.name ?: "Di2") + if (bike.demo) " · Demo" else ""
+        Link.CONNECTED -> P.accent to (if (bike.demo) "Demo" else profile?.name ?: bike.name ?: "Di2")
         Link.CONNECTING -> P.muted to tr("Verbinde …", "Connecting …")
         Link.SEARCHING -> P.faint to tr("Suche Schaltwerk", "Looking for derailleur")
         Link.NO_BLUETOOTH -> P.warn to tr("Bluetooth aus", "Bluetooth off")

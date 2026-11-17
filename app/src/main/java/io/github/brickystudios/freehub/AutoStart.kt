@@ -56,6 +56,16 @@ object AutoStart {
             .onFailure { Log.w("Freehub", "presence watch failed", it) }.isSuccess
     }
 
+    /** A removed bike should not wake Freehub any more. */
+    @Suppress("DEPRECATION")
+    fun forget(c: Context, address: String) {
+        val m = cdm(c) ?: return
+        m.associations.filter { it.equals(address, ignoreCase = true) }.forEach { a ->
+            runCatching { m.stopObservingDevicePresence(a) }
+            runCatching { m.disassociate(a) }
+        }
+    }
+
     @Suppress("DEPRECATION")
     fun off(c: Context) {
         val m = cdm(c) ?: return

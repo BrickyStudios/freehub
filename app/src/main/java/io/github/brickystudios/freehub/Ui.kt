@@ -260,9 +260,14 @@ fun Toggle(on: Boolean) {
 
 object Prefs {
     private fun p(c: Context) = c.getSharedPreferences("prefs", Context.MODE_PRIVATE)
-    /** wheel circumference in mm; 2136 = 700x28C */
-    fun wheel(c: Context) = p(c).getInt("wheel", 2136)
-    fun setWheel(c: Context, mm: Int) = p(c).edit().putInt("wheel", mm).apply()
+    // per bike since 0.6: these read and write the bike shown (Garage); the legacy* ones are the values
+    // from before bikes existed, which the first paired bike takes over
+    fun wheel(c: Context) = Garage.current?.wheel ?: 2136
+    fun setWheel(c: Context, mm: Int) = Garage.update { it.copy(wheel = mm) }
+    fun legacyWheel(c: Context) = p(c).getInt("wheel", 2136)
+    fun legacyRings(c: Context) = p(c).getInt("rings", -1)
+    fun legacyCogs(c: Context) = p(c).getInt("cogs", -1)
+    fun legacyRaw(c: Context): String? = p(c).getString("gears", null)
     fun background(c: Context) = p(c).getBoolean("background", true)
     fun setBackground(c: Context, on: Boolean) = p(c).edit().putBoolean("background", on).apply()
     /** a tick per cog while the app is open */
@@ -271,10 +276,10 @@ object Prefs {
     fun lang(c: Context) = p(c).getString("lang", null)
     fun setLang(c: Context, lang: String?) = p(c).edit().putString("lang", lang).apply()
     /** crank and cassette pattern numbers picked by hand; -1 = take what the derailleur reports */
-    fun rings(c: Context) = p(c).getInt("rings", -1)
-    fun setRings(c: Context, pattern: Int) = p(c).edit().putInt("rings", pattern).apply()
-    fun cogs(c: Context) = p(c).getInt("cogs", -1)
-    fun setCogs(c: Context, pattern: Int) = p(c).edit().putInt("cogs", pattern).apply()
+    fun rings(c: Context) = Garage.current?.rings ?: -1
+    fun setRings(c: Context, pattern: Int) = Garage.update { it.copy(rings = pattern) }
+    fun cogs(c: Context) = Garage.current?.cogs ?: -1
+    fun setCogs(c: Context, pattern: Int) = Garage.update { it.copy(cogs = pattern) }
     /** the first-start setup ran through (or was skipped) */
     fun onboarded(c: Context) = p(c).getBoolean("onboarded", false)
     fun setOnboarded(c: Context, done: Boolean) = p(c).edit().putBoolean("onboarded", done).apply()
@@ -291,8 +296,8 @@ object Prefs {
         Sbi.periodic(hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
     }
     /** the same report as hex, shown under Bike so a rider can send it when the teeth come out wrong */
-    fun rawGears(c: Context): String? = p(c).getString("gears", null)
-    fun setLastGears(c: Context, raw: ByteArray) = p(c).edit().putString("gears", raw.joinToString("") { "%02x".format(it) }).apply()
+    fun rawGears(c: Context): String? = Garage.current?.raw
+    fun setLastGears(c: Context, raw: ByteArray) = Garage.update { it.copy(raw = raw.joinToString("") { b -> "%02x".format(b) }) }
 }
 
 /** "38 min", "1:24 h", and whole hours from ten on, where minutes stop mattering */

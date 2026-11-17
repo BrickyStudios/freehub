@@ -33,6 +33,7 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 - **D-Fly buttons**: press one of the extra buttons on the hoods and the app shows which channel arrived.
 - **A tick for every cog.** While the app is open, each shift gives a short buzz per cog, like the pawls of a freehub clicking over the ratchet. You can switch it off.
 - **English or German**, whatever language your phone runs.
+- **Your bikes only.** You pair a derailleur once from a list of those in range, nearest first. From then on Freehub connects to paired derailleurs only, so a second bike of the same model next to yours (a brother's, a friend's) is never touched. Several bikes each keep their own rides, distance, battery log, crankset, cassette and tyre; the screens follow whichever bike wakes up.
 - **Swipe between the tabs**, or tap the glass bar at the bottom.
 - **A setup on first start** that walks through Bluetooth, connecting, crankset and cassette, auto start and GPS, so everything works from the first ride. It runs again from Bike → Settings.
 

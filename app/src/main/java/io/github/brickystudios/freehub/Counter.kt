@@ -22,17 +22,26 @@ object Counter {
     val totals = MutableStateFlow(Totals())
     val now = MutableStateFlow<RideNow?>(null)
 
-    private lateinit var file: File
+    /** this bike's statistics; null while no bike is paired (nothing to count then) */
+    private var file: File? = null
+    private var key: String? = null
+    private var opened = false
     private val main = Handler(Looper.getMainLooper())
     private var ride: Ride? = null
     private var demo = false
     private var lastSave = 0L
     private val track = Track()
 
-    fun init(ctx: Context) {
-        if (::file.isInitialized) return
-        file = File(ctx.filesDir, "stats.json")
-        val o = runCatching { JSONObject(file.readText()) }.getOrNull() ?: return
+    /** Switches to a bike's statistics (see [Garage]). A ride in progress is saved to the bike it ran on first. */
+    fun open(ctx: Context, key: String?) {
+        if (opened && key == this.key) return
+        finish()
+        opened = true
+        this.key = key
+        file = key?.let { File(ctx.filesDir, "stats-$it.json") }
+        if (demo) return // the demo keeps its sample; the real numbers load when it ends
+        totals.value = Totals()
+        val o = runCatching { JSONObject(file!!.readText()) }.getOrNull() ?: return
         var t = Totals.fromJson(o)
         // a ride the system cut short when it ended the app: keep what was counted
         o.optJSONObject("open")?.let { t = t.plus(Ride.fromJson(it)) }
@@ -114,16 +123,17 @@ object Counter {
         if (System.currentTimeMillis() - lastSave > SAVE_EVERY_MS) save()
     }
 
-    private fun load() = runCatching { Totals.fromJson(JSONObject(file.readText())) }.getOrDefault(Totals())
+    private fun load() = runCatching { Totals.fromJson(JSONObject(file!!.readText())) }.getOrDefault(Totals())
 
     /** Writes to a temp file first, so a crash mid-write never leaves half a file. */
     private fun save() {
-        if (demo || !::file.isInitialized) return
+        val f = file ?: return
+        if (demo) return
         lastSave = System.currentTimeMillis()
         val o = totals.value.toJson()
         ride?.let { o.put("open", it.toJson()) }
-        val tmp = File(file.path + ".tmp")
+        val tmp = File(f.path + ".tmp")
         tmp.writeText(o.toString())
-        tmp.renameTo(file)
+        tmp.renameTo(f)
     }
 }

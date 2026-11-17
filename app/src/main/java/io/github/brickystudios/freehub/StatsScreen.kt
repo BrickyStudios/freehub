@@ -32,7 +32,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, onReset: () -> Unit) {
+fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, bikeName: String?, onReset: () -> Unit) {
     // the ride in progress counts too, so the numbers move while you ride
     val usage = (totals.usage.keys + (ride?.usage?.keys ?: emptySet())).associateWith { (totals.usage[it] ?: 0) + (ride?.usage?.get(it) ?: 0) }
     val shifts = totals.shifts + (ride?.let { it.rear + it.front } ?: 0)
@@ -41,7 +41,7 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, onRe
     val rearMax = gears?.rearMax ?: usage.keys.maxOfOrNull { it.rear } ?: 12
 
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 20.dp)) {
-        Label(tr("Seit Beginn", "All time"))
+        Label(tr("Seit Beginn", "All time") + (bikeName?.let { " · $it" } ?: ""))
         Num(count(shifts), 88.sp)
         BodyText(
             tr("Schaltvorgänge in ${totals.rides.size + (if (ride != null) 1 else 0)} Fahrten · ${duration(ms)}", "shifts in ${totals.rides.size + (if (ride != null) 1 else 0)} rides · ${duration(ms)}"),
