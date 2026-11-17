@@ -157,11 +157,29 @@ The reply on `0x2AF9` is `33 33 <command> <data…>`: byte 0 is the PCE response
 
 Freehub sends `00 13 33 04 00 01 01` once and reads the reply command: `0x06` would mean gear data to decode (little-endian `uint16` minutes per gear, the last sequence a `uint32` overflow bitmask adding 65,536 per set bit, shown as percentages by the largest-remainder method); `0x07` it reports plainly as "no stored gear usage". A derailleur configured in E-TUBE would be needed to capture and decode a real `0x06` stream.
 
-### Error log
+### Unit commands (the rest of E-TUBE's features)
 
-The derailleur also keeps an error history, which E-TUBE reads with `PCA_HIST_ERR_GET`: group `0x32`, command `0xCC`, one entry index as the parameter. Unlike the gear usage it is read one index per request, not streamed, and errors are logged whatever the drivetrain configuration, so a derailleur never set up in E-TUBE should still have entries. Freehub reads it in the dev memory read as `00 13 32 cc <index>` for the first few indices; the reply format is read off the first real capture before it is parsed into E-TUBE's error entry (an error id, counters and a factor list). Read-only.
+Every E-TUBE feature is a unit command in the same form — `00 13 <group> <command> <params…>` to `0x2AFA`, reply `33 <group> <command | 2> …` on `0x2AF9`. The group and command bytes come from E-TUBE's own `UnitCommandSetting(…, group, command, …)` call sites (names below only to say what each is for; no Shimano code is in this repo). The reads worth having in a derailleur app:
 
-Freehub never writes a setting and never touches the firmware service `0x18FE`.
+| group·cmd | name | reads |
+|---|---|---|
+| `01·2C` | `UNIT_FW_VER_GET` | firmware version |
+| `01·94` | `SYS_HAVE_UNIT_NO_GET` | how many units on the system |
+| `02·14` | `SYS_SLOT_STOCK_NO_GET` | slot / part number |
+| `4A·04` | `TMR_DATE_GET` | the unit's internal date |
+| `32·AC` | `PCA_SYNC_GET` | synchronized-shift config (the shift mode) |
+| `32·EC` | `PCA_SUB_SYNC_GET` | semi-synchronized config |
+| `32·CC` | `PCA_HIST_ERR_GET` | error log, one entry index per request |
+| `32·C4` | `PCA_HIST_USE_GET` | older usage history |
+| `32·84` | `PCA_DATA_VALUE_PART_UNIT_GET` | a general value reader |
+| `0B·EC` | `EXTM_RA_AUTO_SFT_GET` | auto-shift config |
+| `33·64` | `PCA2_TAMPERING_INFO_GET` | tampering flags |
+
+Writes (they change the derailleur, so they stay behind a deliberate action, never the read sweep): `0B·F8` `EXTM_RA_SFT_MODE_SEL_SET` sets the shift mode (`00 13 0b f8 <1 = manual, 0 = synchronized> 00`), `0B·E8` auto-shift, `0B·60` multishift, `32·68` `PCA_POSSET_LV_SET` the adjust level (fine-tune). Skipped: SHIMANO ID / cloud, firmware (`0x18FE`), and the e-bike motor / power-meter groups (`16`, `17`, `38`, `39`).
+
+The current shift mode is already in the live `0x2AC1` data (byte 1). To learn every reply format at once, the developer options sweep all the reads above after login and the listener logs each reply; the per-feature decoding and screens follow from that one capture.
+
+Freehub never writes a setting on its own and never touches the firmware service `0x18FE`.
 
 ## How this was worked out
 

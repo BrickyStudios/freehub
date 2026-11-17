@@ -318,12 +318,11 @@ object Di2 {
     private var memoryNonce: ByteArray? = null
     private var memoryPackets = 0
     private var memoryListening = false
-    private var memoryGotData = false
-    private var memoryNoData = false
     private const val MEMORY_STEP_MS = 6_000L
-    private const val MEMORY_LISTEN_MS = 18_000L
-    /** gap between the error-log entry reads */
-    private const val MEMORY_ERRLOG_STEP_MS = 1_000L
+    /** long enough for the whole probe sweep (one command per [MEMORY_SWEEP_STEP_MS]) plus a little tail */
+    private const val MEMORY_LISTEN_MS = 24_000L
+    /** gap between the swept read commands, so each reply lands under its own label */
+    private const val MEMORY_SWEEP_STEP_MS = 1_000L
 
     fun readMemory() {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
@@ -334,8 +333,6 @@ object Di2 {
         memoryNonce = null
         memoryPackets = 0
         memoryListening = false
-        memoryGotData = false
-        memoryNoData = false
         memory.value = tr("Melde mich am Schaltwerk an …", "Logging in to the derailleur …")
         queueMemory()
         kick()
@@ -355,19 +352,20 @@ object Di2 {
 
     private val memoryDone = Runnable {
         endMemory(when {
-            memoryGotData -> tr("Gangnutzung gelesen ($memoryPackets Pakete). Mitschnitt teilen.", "Gear usage read ($memoryPackets packets). Share the capture.")
-            memoryNoData -> tr("Dein Schaltwerk hat keine Gangnutzung gespeichert — es wurde nie in E-TUBE eingerichtet.", "Your derailleur has no stored gear usage — it was never set up in E-TUBE.")
-            else -> tr("Fertig: $memoryPackets Pakete. Mitschnitt teilen.", "Done: $memoryPackets packets. Share the capture.")
+            memoryPackets > 0 -> tr("Fertig: $memoryPackets Antworten. Jetzt Mitschnitt teilen.", "Done: $memoryPackets replies. Now share the capture.")
+            else -> tr("Angemeldet, aber keine Antworten. Mitschnitt teilen.", "Logged in, but no replies. Share the capture.")
         })
     }
 
-    /** Reads error-log entry [i], then schedules the next; E-TUBE reads one index per request (read-only). */
-    private fun sendErrorLog(i: Int) {
-        if (!memoryPending || i >= Etube.ERROR_LOG_COUNT) return
-        DevLog.note("error-log $i")
-        write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.errorLog(i))
+    /** Sends read command [i] of the probe sweep, then schedules the next; the listener logs every reply. */
+    private fun sweepProbe(i: Int) {
+        if (!memoryPending) return
+        val reads = Etube.PROBE_READS
+        val (label, bytes) = reads.getOrNull(i) ?: return
+        DevLog.note("probe: $label")
+        write(Etube.SERVICE, Etube.PCE_COMMAND, bytes)
         kick()
-        main.postDelayed({ sendErrorLog(i + 1) }, MEMORY_ERRLOG_STEP_MS)
+        if (i + 1 < reads.size) main.postDelayed({ sweepProbe(i + 1) }, MEMORY_SWEEP_STEP_MS)
     }
 
     /** Ends the memory read and reconnects, because the unit stays in command mode otherwise. */
@@ -395,19 +393,15 @@ object Di2 {
                 // the unit indicates APP_OK more than once; start the burst only on the first
                 v.contentEquals(Etube.APP_OK) && !memoryListening -> {
                     memoryListening = true
-                    memory.value = tr("Angemeldet, lese Gangnutzung …", "Logged in, reading gear usage …")
+                    memory.value = tr("Angemeldet, lese Werte …", "Logged in, reading values …")
                     write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
-                    DevLog.note("gear-usage request")
-                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.GEAR_USAGE)
-                    main.postDelayed({ sendErrorLog(0) }, MEMORY_ERRLOG_STEP_MS) // after the gear-usage reply
+                    sweepProbe(0)
                     main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
                 }
             }
             Etube.PCE_RESPONSE, Etube.FREE_RESPONSE -> {
                 memoryPackets++
-                if (Etube.isGearUsageData(v)) memoryGotData = true
-                else if (Etube.isNoGearUsage(v)) memoryNoData = true
-                memory.value = tr("Empfange … $memoryPackets Pakete", "Receiving … $memoryPackets packets")
+                memory.value = tr("Empfange … $memoryPackets Antworten", "Receiving … $memoryPackets replies")
             }
         }
         main.removeCallbacks(memoryStuck)

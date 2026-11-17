@@ -38,39 +38,38 @@ object Etube {
     val COMMAND_MODE = hex("ff00")
 
     /**
-     * The gear-usage read the RD-R7150 accepts (BikeBridge's unit-command opcode 0x13): slot 0x00, opcode 0x13,
-     * group 0x33, command 0x04, log 0, sequence 1, transfer mode 1. The reply on 0x2AF9 is `33 33 <command> …`:
-     * opcode 0x33, group 0x33, then the reply command. A successful read answers command 0x06 (`0x04 | 2`); the
-     * tested derailleur answers 0x07 instead — the no-data code — because it was never set up in E-TUBE and holds
-     * no history. The DCAS `0x48` form of the same command drew no reply on this unit.
+     * A unit command in the form the RD-R7150 accepts (BikeBridge's unit-command opcode 0x13): slot 0x00,
+     * opcode 0x13, group, command, then the parameters. The reply on 0x2AF9 is `33 <group> <reply command> …`,
+     * where the reply command is `command | 2` for data and `command | 3` when the unit has nothing to send.
+     * The exact group/command bytes come from E-TUBE's own `UnitCommandSetting(…, group, command, …)` sites.
      */
-    val GEAR_USAGE = hex("00133304000101")
-
-    private const val REPLY_OPCODE = 0x33
-    private const val REPLY_GROUP = 0x33
-    const val REPLY_OK = 0x06      // command 0x04 answered with data
-    const val REPLY_NO_DATA = 0x07 // command 0x04 answered "nothing stored"
-
-    private fun replyCommand(v: ByteArray): Int? =
-        if (v.getOrNull(0)?.toInt()?.and(0xFF) == REPLY_OPCODE && v.getOrNull(1)?.toInt()?.and(0xFF) == REPLY_GROUP)
-            v.getOrNull(2)?.toInt()?.and(0xFF) else null
-
-    /** a 0x2AF9 reply that carries gear-usage data (reply command 0x06) */
-    fun isGearUsageData(v: ByteArray) = replyCommand(v) == REPLY_OK
-
-    /** the derailleur's "no gear usage stored" reply (reply command 0x07) */
-    fun isNoGearUsage(v: ByteArray) = replyCommand(v) == REPLY_NO_DATA
-
-    /** how many error-log entries to read (E-TUBE's `PCA_HIST_ERR_GET` is one index per request) */
-    const val ERROR_LOG_COUNT = 8
+    fun unitCommand(group: Int, command: Int, vararg params: Int): ByteArray =
+        byteArrayOf(0x00, 0x13, group.toByte(), command.toByte()) + ByteArray(params.size) { params[it].toByte() }
 
     /**
-     * One entry of the derailleur's error history (E-TUBE's `PCA_HIST_ERR_GET`): slot 0x00, opcode 0x13,
-     * group 0x32, command 0xCC, then the entry index. Read-only, read one index at a time. Errors are logged
-     * whatever the drivetrain config, so unlike gear usage this should hold data. The reply format is read off
-     * the first real capture before it is parsed.
+     * Every read the developer "probe" sweeps after login, so one capture reveals every reply format at once.
+     * All read-only (`*_GET`); the parameters are a best guess (mostly a zero), which is enough to see which
+     * commands answer and how. Decoding and the matching screens follow from the capture.
      */
-    fun errorLog(index: Int) = hex("001332cc") + byteArrayOf(index.toByte())
+    val PROBE_READS: List<Pair<String, ByteArray>> = listOf(
+        "fw-version" to unitCommand(0x01, 0x2C, 0),        // UNIT_FW_VER_GET
+        "unit-count" to unitCommand(0x01, 0x94, 0),        // SYS_HAVE_UNIT_NO_GET_C
+        "slot-no" to unitCommand(0x02, 0x14, 0),           // SYS_SLOT_STOCK_NO_GET
+        "date" to unitCommand(0x4A, 0x04, 0),              // TMR_DATE_GET
+        "date-adj" to unitCommand(0x4A, 0x0C, 0),          // TMR_DATE_ADJ_GET
+        "value" to unitCommand(0x32, 0x84, 0),             // PCA_DATA_VALUE_PART_UNIT_GET
+        "data-via-unit" to unitCommand(0x32, 0xBC, 0),     // PCA_DATA_VIA_UNIT_GET
+        "synchro" to unitCommand(0x32, 0xAC, 0, 0, 0, 0),  // PCA_SYNC_GET_C (shift-mode / synchro config)
+        "sub-synchro" to unitCommand(0x32, 0xEC, 0, 0, 0, 0), // PCA_SUB_SYNC_GET_C (semi-synchro)
+        "auto-shift" to unitCommand(0x0B, 0xEC, 0),        // EXTM_RA_AUTO_SFT_GET_C
+        "alt-num" to unitCommand(0x0B, 0x7C, 0),           // EXTM_RA_ALT_NUM_GET
+        "usage-old" to unitCommand(0x32, 0xC4, 0),         // PCA_HIST_USE_GET
+        "tampering" to unitCommand(0x33, 0x64, 0),         // PCA2_TAMPERING_INFO_GET_C
+        "gear-usage" to unitCommand(0x33, 0x04, 0, 1, 1),  // PCA2_HIST2_USE_GET (known: no data on this RD)
+        "error-log0" to unitCommand(0x32, 0xCC, 0),        // PCA_HIST_ERR_GET index 0
+        "error-log1" to unitCommand(0x32, 0xCC, 1),
+        "error-log2" to unitCommand(0x32, 0xCC, 2),
+    )
 
     /** Passkeys are six digits; anything else read from the unit is not one. */
     fun passkeyOrDefault(raw: ByteArray?): String =

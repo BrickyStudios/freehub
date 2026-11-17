@@ -22,23 +22,21 @@ class EtubeTest {
         assertEquals("000000", Etube.passkeyOrDefault("12345a".toByteArray()))
     }
 
-    @Test fun gearUsageRequestAndReplyClassification() {
-        assertEquals("00 13 33 04 00 01 01", Etube.GEAR_USAGE.hex())
-        // the RD-R7150's "nothing stored" reply: opcode 0x33, group 0x33, reply command 0x07
-        assertTrue(Etube.isNoGearUsage(Etube.hex("3333073b00b9c1fdc277")))
-        assertFalse(Etube.isGearUsageData(Etube.hex("3333073b00b9c1fdc277")))
-        // a reply carrying data would be reply command 0x06
-        assertTrue(Etube.isGearUsageData(Etube.hex("33330600000000")))
-        assertFalse(Etube.isNoGearUsage(Etube.hex("33330600000000")))
-        // the plain status packet (byte 1 is 0x01, not the group) is neither
-        assertFalse(Etube.isNoGearUsage(Etube.hex("3301073b00")))
-        assertFalse(Etube.isGearUsageData(Etube.hex("3301073b00")))
+    @Test fun unitCommandWrapsGroupCommandAndParams() {
+        // slot 0x00, opcode 0x13, then group, command, params
+        assertEquals("00 13 33 04 00 01 01", Etube.unitCommand(0x33, 0x04, 0, 1, 1).hex())
+        assertEquals("00 13 32 cc 00", Etube.unitCommand(0x32, 0xCC, 0).hex())
+        assertEquals("00 13 01 2c 00", Etube.unitCommand(0x01, 0x2C, 0).hex())
     }
 
-    @Test fun errorLogRequestPerIndex() {
-        // slot 0x00, opcode 0x13, group 0x32, command 0xCC (PCA_HIST_ERR_GET), then the entry index
-        assertEquals("00 13 32 cc 00", Etube.errorLog(0).hex())
-        assertEquals("00 13 32 cc 05", Etube.errorLog(5).hex())
+    @Test fun probeSweepHasDistinctLabelsAndWellFormedCommands() {
+        val reads = Etube.PROBE_READS
+        assertTrue(reads.size >= 10)
+        assertEquals(reads.size, reads.map { it.first }.toSet().size) // labels are unique
+        reads.forEach { (_, bytes) ->
+            assertEquals(0x00.toByte(), bytes[0])
+            assertEquals(0x13.toByte(), bytes[1]) // every command uses the 0x13 unit-command opcode
+        }
     }
 
     @Test fun characteristicShortNames() {
