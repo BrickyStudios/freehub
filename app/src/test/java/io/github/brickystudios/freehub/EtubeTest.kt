@@ -38,10 +38,10 @@ class EtubeTest {
         assertEquals(null, Etube.replyHasData(Etube.hex("100201")))
     }
 
-    @Test fun setShiftModeCommand() {
-        // EXTM_RA_SFT_MODE_SEL_SET_C: group 0x0B, command 0xF8, 1 = manual / 0 = synchronized, trailing 0
-        assertEquals("00 13 0b f8 01 00", Etube.setShiftMode(true).hex())
-        assertEquals("00 13 0b f8 00 00", Etube.setShiftMode(false).hex())
+    @Test fun setShiftModeCommandIsADcasFrame() {
+        // EXTM_RA_SFT_MODE_SEL_SET_C: group 0x0B, command 0xF8, 1 = manual / 0 = synchronized, trailing 0, DCAS-framed
+        assertEquals("bb 48 00 0b f8 01 00 4d bb", Etube.setShiftMode(true).hex())
+        assertEquals("bb 48 00 0b f8 00 00 4c bb", Etube.setShiftMode(false).hex())
     }
 
     @Test fun dcasFrameMatchesReconstruction() {

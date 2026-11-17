@@ -50,9 +50,10 @@ object Etube {
     /**
      * Set the shift mode (E-TUBE's `DCC_CMD_EXTM_RA_SFT_MODE_SEL_SET_C`): group 0x0B, command 0xF8, then
      * `1` = manual front shifting, `0` = synchronized, and a trailing 0. A write — it changes the derailleur.
-     * shortcut: slot 0; may need the derailleur's real slot, like the reads — upgrade once the slot sweep lands.
+     * Sent as a DCAS frame: the Opus review showed the plain 0x13 form reaches only the system responder, so a
+     * group-0x0B write has to go through the real transport like the reads.
      */
-    fun setShiftMode(manual: Boolean) = unitCommand(0, 0x0B, 0xF8, if (manual) 1 else 0, 0)
+    fun setShiftMode(manual: Boolean) = dcasCommand(0, 0x0B, 0xF8, if (manual) 1 else 0, 0)
 
     private fun fcs(bytes: ByteArray) = (bytes.sumOf { it.toInt() and 0xFF } + 1) and 0xFF
 
