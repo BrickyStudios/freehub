@@ -116,7 +116,7 @@ Some phones need a bonded link before the indication arrives. Pairing is "just w
 
 ## 0x18FF E-TUBE
 
-The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the developer options, to read the gear usage history the derailleur keeps itself. Status: **login is confirmed on a real RD-R7150** (firmware 4.1.0.0); the gear-usage read does **not** work yet, because the command has to be wrapped in a DCAS frame that Freehub does not build (see below).
+The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the developer options, to read the gear usage history the derailleur keeps itself. Status: **login is confirmed on a real RD-R7150** (firmware 4.1.0.0); the gear-usage read does **not** work yet, because the command needs a framing Freehub was not adding (see below — it now probes the candidates).
 
 | UUID | Name |
 |---|---|
@@ -149,24 +149,22 @@ The unit command is group `0x33`, command `0x04`, payload `00 01 01` (log `0` = 
 
 This was read from the decompiled E-TUBE PROJECT, then checked against its own send and receive code. Source citations are kept out of this repo; the shape below is what matters.
 
-**The command must be wrapped in a DCAS frame.** E-TUBE does not write the raw bytes; it calls `createFrame(controlInfo = 0x48, data)` and writes the result. The frame is:
+**The command needs a framing Freehub was not adding — but which one is still open.** Two sources disagree, so Freehub tries both:
+
+* E-TUBE PROJECT builds unit commands through `sendDcasRawPacketCommand` → `writeData(72)` → `createFrame`, i.e. a DCAS frame led by control byte `0x48` (72), with a one-byte FCS `(sum of the framed bytes + 1) & 0xFF`, `0xBD` byte stuffing (`0xBD` → `0xBD` then `original XOR 0x20`), and a trailing byte. `createFrame` itself did not decompile, so the exact end is unknown.
+* [BikeBridge](https://codeberg.org/bg443/BikeBridge) writes unit commands to the **same** `0x2AFA` characteristic with no frame at all — `00 13 <group> <command> <params>`, where `0x13` is a write opcode and the derailleur answers on `0x2AF9` starting `0x33` (`0x13 | 0x20`). This is proven against real Shimano hardware, but only for settings commands, not the usage read.
+
+Freehub's first tries sent the bytes completely raw (`00 33 04 00 01 01`, missing both the `0x13` opcode and any frame). The derailleur did not take that as a command and answered with a bare status packet (`33 01 …`), which is **not** gear data — so reading those bytes as counters was reading the wrong packet.
+
+The dev memory read now sends three candidates in turn and logs each reply, so one capture settles it:
 
 ```
-0x48  <slotNo>  <command bytes>  <FCS>  <end>
+unit13   00 13 33 04 00 01 01              (BikeBridge opcode form)
+dcas48   48 00 33 04 00 01 01 82           (E-TUBE control byte + FCS)
+raw      00 33 04 00 01 01                 (the old attempt, for contrast)
 ```
 
-* `0x48` (72) — DCAS control byte. A frame with any other first byte (the derailleur's un-framed replies start `0x33`) is not DCAS data.
-* `<slotNo>` — target unit, `0x00` for the rear derailleur.
-* `<command bytes>` — `33 04 00 01 01` for the gear-usage read.
-* `<FCS>` — one byte, `(sum of every preceding frame byte + 1) & 0xFF`.
-* `<end>` — one trailing byte (from `createFrame`, which did not decompile).
-* Byte stuffing: any `0xBD` in the body is sent as `0xBD` then `original XOR 0x20`; the receiver reverses it.
-
-So the gear-usage read on the wire is about `48 00 33 04 00 01 01 <FCS> <end>`, not `00 33 04 00 01 01`. **This is why Freehub's read fails today**: it sends the raw command, the derailleur does not take it as DCAS, and answers with an un-framed status packet (`33 01 …`), which is *not* gear data — so earlier attempts to read those bytes as counters were reading the wrong packet.
-
-A real reply is a DCAS frame (`0x48 …`) whose body, once de-framed, is `33 06 <log> <seq> <data…>`: group `0x33`, reply command `0x06` (request `0x04` with bit 1 set), the sequence in byte 3, gear data from byte 4. The data is plain, not encrypted — only the login on `0x2AF3`/`0x2AF4`/`0x2AF8` is. Per sequence the gear times are little-endian `uint16` values in minutes; the final sequence is a `uint32` overflow bitmask that adds 65,536 minutes per set bit. The UI turns the per-gear minutes into percentages with the largest-remainder method.
-
-The exact `end` byte and any frame delimiter still need either the `createFrame` bytecode or [BikeBridge](https://codeberg.org/bg443/BikeBridge), which already frames this service for e-bike motors.
+A real reply (whatever the framing) de-frames to `33 06 <log> <seq> <data…>`: group `0x33`, reply command `0x06` (request `0x04` with bit 1 set), the sequence in byte 3, gear data from byte 4. In high-speed mode the derailleur then streams the rest on its own (RD alone: sequences 1 to 7; with a front derailleur: 1 to 13), ending at `sequence ≥ max` or after 3 s of silence. The data is plain, not encrypted — only the login on `0x2AF3`/`0x2AF4`/`0x2AF8` is. Each sequence holds little-endian `uint16` gear times in minutes; the last is a `uint32` overflow bitmask that adds 65,536 minutes per set bit. The UI turns the per-gear minutes into percentages with the largest-remainder method.
 
 Freehub never writes a setting and never touches the firmware service `0x18FE`.
 

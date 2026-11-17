@@ -308,7 +308,7 @@ object Di2 {
     // ---- the derailleur's own memory (0x18FF), developer options, experimental ----
     //
     //   read passkey + nonce → write 01+AES(passkey key, nonce) → 10 01 01
-    //   → write 02+AES(app key, nonce) → 10 02 01 → write FF 00, then request each sequence in turn
+    //   → write 02+AES(app key, nonce) → 10 02 01 → write FF 00, then each candidate gear-usage request
     //   → everything on 2AF9 / 2AFD is logged for [MEMORY_LISTEN_MS] → reconnect for live gears again
 
     /** a sentence for the screen while reading the memory, null when idle */
@@ -318,11 +318,10 @@ object Di2 {
     private var memoryNonce: ByteArray? = null
     private var memoryPackets = 0
     private var memoryListening = false
-    private var memorySeq = 0
     private const val MEMORY_STEP_MS = 6_000L
-    private const val MEMORY_LISTEN_MS = 15_000L
-    /** sequences to read: a rear derailleur alone has 1–7, with a front derailleur 1–13 */
-    private const val MEMORY_MAX_SEQ = 13
+    private const val MEMORY_LISTEN_MS = 16_000L
+    /** gap between the candidate gear-usage requests, so each one's reply lands under its own label */
+    private const val MEMORY_PROBE_STEP_MS = 4_000L
 
     fun readMemory() {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
@@ -354,6 +353,17 @@ object Di2 {
         endMemory(tr("Fertig: $memoryPackets Pakete empfangen. Jetzt Mitschnitt teilen.", "Done: $memoryPackets packets received. Now share the capture."))
     }
 
+    /** Sends gear-usage request candidate [i], then schedules the next; the capture shows which one streams. */
+    private fun sendProbe(i: Int) {
+        if (!memoryPending) return
+        val probes = Etube.GEAR_USAGE_PROBES
+        val (label, bytes) = probes.getOrNull(i) ?: return
+        DevLog.note("gear-usage probe: $label")
+        write(Etube.SERVICE, Etube.PCE_COMMAND, bytes)
+        kick()
+        if (i + 1 < probes.size) main.postDelayed({ sendProbe(i + 1) }, MEMORY_PROBE_STEP_MS)
+    }
+
     /** Ends the memory read and reconnects, because the unit stays in command mode otherwise. */
     private fun endMemory(text: String) {
         main.removeCallbacks(memoryStuck)
@@ -381,22 +391,11 @@ object Di2 {
                     memoryListening = true
                     memory.value = tr("Angemeldet, lese Gangnutzung …", "Logged in, reading gear usage …")
                     write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
-                    memorySeq = 1
-                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.gearUsage(memorySeq))
+                    sendProbe(0)
                     main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
                 }
             }
-            Etube.PCE_RESPONSE -> {
-                memoryPackets++
-                memory.value = tr("Empfange … $memoryPackets Pakete", "Receiving … $memoryPackets packets")
-                // the reply echoes its sequence (`33 <seq> …`); request the next until the last one
-                if (v.getOrNull(0)?.toInt()?.and(0xFF) == Etube.GEAR_USAGE_GROUP &&
-                    v.getOrNull(1)?.toInt()?.and(0xFF) == memorySeq && memorySeq < MEMORY_MAX_SEQ) {
-                    memorySeq++
-                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.gearUsage(memorySeq))
-                }
-            }
-            Etube.FREE_RESPONSE -> {
+            Etube.PCE_RESPONSE, Etube.FREE_RESPONSE -> {
                 memoryPackets++
                 memory.value = tr("Empfange … $memoryPackets Pakete", "Receiving … $memoryPackets packets")
             }

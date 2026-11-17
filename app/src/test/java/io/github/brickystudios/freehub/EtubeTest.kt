@@ -20,11 +20,21 @@ class EtubeTest {
         assertEquals("000000", Etube.passkeyOrDefault("12345a".toByteArray()))
     }
 
-    @Test fun gearUsageRequestIsWhatEtubeSends() {
-        // control byte, group 0x33, command 0x04, log 0, sequence, high-speed transfer; only the sequence byte moves
-        assertEquals("00 33 04 00 01 01", Etube.gearUsage(1).hex())
-        assertEquals("00 33 04 00 07 01", Etube.gearUsage(7).hex())
-        assertEquals(0x33, Etube.GEAR_USAGE_GROUP)
+    @Test fun gearUsageProbesAreTheCandidatesWeTry() {
+        val probes = Etube.GEAR_USAGE_PROBES.toMap()
+        assertEquals("00 13 33 04 00 01 01", probes["unit13"]!!.hex()) // BikeBridge write opcode 0x13
+        assertEquals("00 33 04 00 01 01", probes["raw"]!!.hex())       // what Freehub sent until now
+        // DCAS: control 0x48 + body + FCS; sum(48 00 33 04 00 01 01) = 0x81, +1 = 0x82
+        assertEquals("48 00 33 04 00 01 01 82", probes["dcas48"]!!.hex())
+    }
+
+    @Test fun fcsIsLowByteOfSumPlusOne() {
+        assertEquals(0x82.toByte(), Etube.fcs(Etube.hex("48003304000101")))
+        assertEquals(0x01.toByte(), Etube.fcs(Etube.hex("")))   // empty → 0 + 1
+        assertEquals(0x00.toByte(), Etube.fcs(Etube.hex("ff"))) // 255 + 1 wraps to 0
+    }
+
+    @Test fun characteristicShortNames() {
         assertEquals("2AC1", DevLog.short(Sbi.PERIODIC))
         assertEquals("2A19", DevLog.short(Sbi.BATTERY_LEVEL))
     }
