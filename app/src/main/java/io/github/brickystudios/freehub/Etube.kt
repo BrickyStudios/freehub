@@ -68,27 +68,37 @@ object Etube {
     }
 
     /**
-     * A DCAS frame — how E-TUBE actually sends every unit command (per the Opus review of the decompiled helpers;
-     * `createFrame` itself did not decompile, so this is reconstructed): flag `0xBB`, then the byte-stuffed body
-     * `[controlInfo 0x48, slot, group, command, params…, FCS]` where FCS = `(sum + 1) & 0xFF`, then flag `0xBB`.
-     * This is the transport the config reads need; the plain `0x13` form reaches only the system responder (group 01).
+     * A DCAS frame, the transport E-TUBE uses for every command on 0x2AFA (byte-exact, read from the Dalvik
+     * bytecode and round-trip-checked against the receive parser): flag `0xBB`, then the byte-stuffed body
+     * `[controlInfo] + data + [FCS]` where FCS = `(controlInfo + Σdata + 1) & 0xFF`, then flag `0xBB`.
      */
-    fun dcasCommand(slot: Int, group: Int, command: Int, vararg params: Int): ByteArray {
-        val body = byteArrayOf(0x48, slot.toByte(), group.toByte(), command.toByte()) + ByteArray(params.size) { params[it].toByte() }
+    fun dcasFrame(controlInfo: Int, vararg data: Int): ByteArray {
+        val body = byteArrayOf(controlInfo.toByte()) + ByteArray(data.size) { data[it].toByte() }
         return byteArrayOf(0xBB.toByte()) + stuff(body + fcs(body).toByte()) + 0xBB.toByte()
     }
 
+    /** A unit command: controlInfo 0x48, then `[slot, group, command, params…]`. */
+    fun dcasCommand(slot: Int, group: Int, command: Int, vararg params: Int): ByteArray =
+        dcasFrame(0x48, slot, group, command, *params)
+
     /**
-     * The developer probe sweep. Opus review: E-TUBE wraps **every** command in a DCAS frame (control byte 0x48,
-     * 0xBB flags, FCS) — the `0x13` form only reaches a system responder that owns group 01, which is why only
-     * firmware and unit count answered. The decisive test: the same known-good firmware read, once as `0x13`
-     * (answers) and once as a real DCAS frame — if the DCAS one answers too, the config reads follow the same way.
+     * The developer probe sweep — the full flow E-TUBE runs, now byte-exact from the decompiled bytecode. The
+     * `0x13` form reached only the group-01 system responder; feature groups need the real DCAS transport AND the
+     * bus setup that puts the derailleur's bridge into addressable mode (`setProtocolMode` 0x03 / `checkProtocolMode`
+     * 0x04 / `setTargetAddress` 0x06, themselves DCAS-framed). A firmware read is sent BEFORE the setup too, to tell
+     * apart "wrong framing" from "missing setup". After the setup, the config reads are sent as DCAS frames.
      */
     val PROBE_READS: List<Pair<String, ByteArray>> = buildList {
-        add("fw-13" to unitCommand(0, 0x01, 0x2C, 0))           // control: known to answer with data
-        add("fw-dcas" to dcasCommand(0, 0x01, 0x2C, 0))         // same command, real DCAS framing — the decisive test
-        add("sync-dcas m16 d0 fd1" to dcasCommand(0, 0x32, 0xAC, 0x10, 1, 0, 0))
-        add("sync-dcas m0 d0 fd1" to dcasCommand(0, 0x32, 0xAC, 0x00, 1, 0, 0))
+        add("fw-dcas no-setup" to dcasCommand(0, 0x01, 0x2C, 0)) // isolates framing from bus setup
+        add("setmode 40|20" to dcasFrame(0x03, 0x60))            // bus setup: into DCAS/addressable mode
+        add("checkmode 1" to dcasFrame(0x04))
+        add("setmode 40|00" to dcasFrame(0x03, 0x40))
+        add("checkmode 2" to dcasFrame(0x04))
+        add("target 1F" to dcasFrame(0x06, 0x1F))                // broadcast address
+        add("slots" to dcasFrame(0x1B))                          // PnP: which slots exist
+        add("target 00" to dcasFrame(0x06, 0x00))                // address the rear derailleur
+        add("fw-dcas" to dcasCommand(0, 0x01, 0x2C, 0))          // feature reads, after setup
+        add("sync-dcas" to dcasCommand(0, 0x32, 0xAC, 0x10, 1, 0, 0))
         add("gear-dcas" to dcasCommand(0, 0x33, 0x04, 0, 1, 1))
         add("date-dcas" to dcasCommand(0, 0x4A, 0x04, 0))
     }

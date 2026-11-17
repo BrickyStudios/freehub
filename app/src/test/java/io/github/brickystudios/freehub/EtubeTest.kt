@@ -45,11 +45,14 @@ class EtubeTest {
     }
 
     @Test fun dcasFrameMatchesReconstruction() {
-        // DCAS: flag 0xBB, [control 0x48, slot, group, cmd, params, FCS=(sum+1)&0xFF], flag 0xBB
-        // firmware 01/2C, slot 0, param 0: sum(48 00 01 2c 00)=0x75, +1=0x76
+        // unit command: flag 0xBB, [control 0x48, slot, group, cmd, params, FCS=(ctrl+Σdata+1)&0xFF], flag 0xBB
         assertEquals("bb 48 00 01 2c 00 76 bb", Etube.dcasCommand(0, 0x01, 0x2C, 0).hex())
-        // synchro 32/AC, mode16 dir0 fd1: sum(48 00 32 ac 10 01 00 00)=0x37, +1=0x38
         assertEquals("bb 48 00 32 ac 10 01 00 00 38 bb", Etube.dcasCommand(0, 0x32, 0xAC, 0x10, 1, 0, 0).hex())
+        // bus-setup frames (controlInfo + data), byte-exact from the decompiled bytecode:
+        assertEquals("bb 03 60 64 bb", Etube.dcasFrame(0x03, 0x60).hex()) // setProtocolMode 0x40|0x20
+        assertEquals("bb 04 05 bb", Etube.dcasFrame(0x04).hex())          // checkProtocolMode (no data)
+        assertEquals("bb 06 1f 26 bb", Etube.dcasFrame(0x06, 0x1F).hex()) // setTargetAddress 0x1F
+        assertEquals("bb 06 00 07 bb", Etube.dcasFrame(0x06, 0x00).hex()) // setTargetAddress slot 0
     }
 
     @Test fun probeSweepHasDistinctLabels() {
