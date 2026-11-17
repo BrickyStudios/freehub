@@ -12,8 +12,8 @@ android {
         applicationId = "io.github.brickystudios.freehub"
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "0.6.18"
+        versionCode = 25
+        versionName = "0.6.19"
         buildConfigField("String", "APK_NAME", "\"Freehub.apk\"")
     }
 

@@ -76,6 +76,40 @@ object Etube {
         Triple("error-log", PCE_COMMAND, unitCommand(0x32, 0xCC, 0)),
     )
 
+    /** What the 2AFD config stream tells us about the derailleur. null fields = the unit did not report them. */
+    data class Config(
+        val rearGears: Pair<Int, Int>? = null,  // min..max, e.g. 1..12
+        val frontGears: Pair<Int, Int>? = null,  // 1..2 on a double
+        val shiftModeManual: Boolean? = null,    // true = manual front shift, false = synchronized
+        val currentRearGear: Int? = null,
+        val batteryPercent: Int? = null,
+    ) {
+        val isEmpty get() = rearGears == null && frontGears == null && shiftModeManual == null &&
+            currentRearGear == null && batteryPercent == null
+    }
+
+    /**
+     * Decode the records the derailleur streams on 0x2AFD after the session opens. Each is `00 <group> <command>
+     * <params…>` (then a 3-byte session tag). The (group, command) → meaning map and byte layout are from E-TUBE's
+     * own code (verified against a real 2×12: rear 1–12, front 1–2, battery percent). `0xFF` means "not stored".
+     */
+    fun parseConfig(records: List<ByteArray>): Config {
+        var c = Config()
+        fun param(v: ByteArray, i: Int) = v.getOrNull(3 + i)?.toInt()?.and(0xFF)?.takeIf { it != 0xFF }
+        for (v in records) {
+            val group = v.getOrNull(1)?.toInt()?.and(0xFF) ?: continue
+            val cmd = v.getOrNull(2)?.toInt()?.and(0xFF) ?: continue
+            when (group shl 8 or cmd) {
+                0x0B18 -> { val lo = param(v, 0); val hi = param(v, 1); if (lo != null && hi != null && hi in 1..24) c = c.copy(rearGears = lo to hi) }
+                0x0A18 -> { val lo = param(v, 0); val hi = param(v, 1); if (lo != null && hi != null && hi in 1..4) c = c.copy(frontGears = lo to hi) }
+                0x0B00 -> param(v, 0)?.let { c = c.copy(shiftModeManual = it == 0) }
+                0x0B08 -> param(v, 0)?.let { if (it in 1..24) c = c.copy(currentRearGear = it) }
+                0x2610 -> param(v, 0)?.let { if (it in 0..100) c = c.copy(batteryPercent = it) }
+            }
+        }
+        return c
+    }
+
     /**
      * Whether a `33 <group> <reply command> …` reply carries data. The reply command is the request command
      * with bit 1 set for data (`& 3 == 2`) or bits 0+1 set when the unit has nothing to send (`& 3 == 3`).

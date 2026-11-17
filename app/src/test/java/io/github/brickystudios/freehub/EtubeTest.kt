@@ -55,6 +55,19 @@ class EtubeTest {
         assertEquals("00 13 0b f8 00 00", Etube.setShiftMode(false).hex())
     }
 
+    @Test fun parseConfigDecodesRealRecords() {
+        // real 2AFD records captured from the bike
+        val recs = listOf("000b18010cffff", "000a180102ffff", "000b00000cffff", "000b080affffff", "00261064000000")
+            .map { Etube.hex(it) }
+        val c = Etube.parseConfig(recs)
+        assertEquals(1 to 12, c.rearGears)
+        assertEquals(1 to 2, c.frontGears)
+        assertEquals(true, c.shiftModeManual)
+        assertEquals(10, c.currentRearGear)
+        assertEquals(100, c.batteryPercent)
+        assertTrue(Etube.parseConfig(listOf(Etube.hex("000bb4ffffffff"))).isEmpty) // unprovisioned teeth → nothing
+    }
+
     @Test fun sessionFlowHasDistinctLabels() {
         val steps = Etube.SESSION_FLOW
         assertTrue(steps.size >= 5)

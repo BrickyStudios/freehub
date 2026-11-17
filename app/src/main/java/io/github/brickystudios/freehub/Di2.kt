@@ -363,6 +363,8 @@ object Di2 {
     private var memoryLastLabel = ""
     /** per probe label: did the derailleur have data for it (reply command | 2) or not (| 3) */
     private val memoryResults = mutableListOf<Pair<String, Boolean>>()
+    /** the records the derailleur streams on 2AFD after the session opens, for [Etube.parseConfig] */
+    private val memoryConfig = mutableListOf<ByteArray>()
     /** what to run once logged in: the read sweep, or a write (e.g. set the shift mode) */
     private var afterLogin: () -> Unit = { sweepProbe(0) }
     private const val MEMORY_STEP_MS = 6_000L
@@ -400,6 +402,7 @@ object Di2 {
         memoryListening = false
         memoryLastLabel = ""
         memoryResults.clear()
+        memoryConfig.clear()
         afterLogin = action
         memory.value = tr("Melde mich am Schaltwerk an …", "Logging in to the derailleur …")
         queueMemory()
@@ -419,12 +422,14 @@ object Di2 {
     private val memoryStuck = Runnable { endMemory(tr("Keine Antwort vom Schaltwerk. Mitschnitt teilen hilft.", "No answer from the derailleur. Sharing the capture helps.")) }
 
     private val memoryDone = Runnable {
-        val withData = memoryResults.filter { it.second }.map { it.first }.distinct()
+        val cfg = Etube.parseConfig(memoryConfig)
         endMemory(when {
-            withData.isNotEmpty() -> tr(
-                "Antwort mit Daten: ${withData.joinToString(", ")}. Mitschnitt teilen.",
-                "Answered with data: ${withData.joinToString(", ")}. Share the capture.",
-            )
+            !cfg.isEmpty -> buildList {
+                cfg.rearGears?.let { add(tr("Antrieb ${cfg.frontGears?.second ?: "?"}×${it.second}", "Drivetrain ${cfg.frontGears?.second ?: "?"}×${it.second}")) }
+                cfg.shiftModeManual?.let { add(if (it) tr("Modus Manuell", "Mode Manual") else tr("Modus Synchro", "Mode Synchro")) }
+                cfg.currentRearGear?.let { add(tr("Gang $it", "Gear $it")) }
+                cfg.batteryPercent?.let { add(tr("Akku $it%", "Battery $it%")) }
+            }.joinToString(" · ").let { tr("Gelesen: $it. Mitschnitt teilen.", "Read: $it. Share the capture.") }
             memoryPackets > 0 -> tr("Fertig: $memoryPackets Antworten. Mitschnitt teilen.", "Done: $memoryPackets replies. Share the capture.")
             else -> tr("Angemeldet, aber keine Antworten. Mitschnitt teilen.", "Logged in, but no replies. Share the capture.")
         })
@@ -475,6 +480,7 @@ object Di2 {
             }
             Etube.PCE_RESPONSE, Etube.FREE_RESPONSE -> {
                 memoryPackets++
+                if (v.getOrNull(0)?.toInt() == 0x00 && v.size >= 5) memoryConfig.add(v) // a 2AFD config record
                 Etube.replyHasData(v)?.let { if (memoryLastLabel.isNotEmpty()) memoryResults.add(memoryLastLabel to it) }
                 memory.value = tr("Empfange … $memoryPackets Antworten", "Receiving … $memoryPackets replies")
             }
