@@ -22,11 +22,17 @@ class EtubeTest {
         assertEquals("000000", Etube.passkeyOrDefault("12345a".toByteArray()))
     }
 
-    @Test fun unitCommandWrapsSlotGroupCommandAndParams() {
-        // slot, opcode 0x13, then group, command, params
-        assertEquals("00 13 33 04 00 01 01", Etube.unitCommand(0, 0x33, 0x04, 0, 1, 1).hex())
-        assertEquals("02 13 32 ac 00 00 00 00", Etube.unitCommand(2, 0x32, 0xAC, 0, 0, 0, 0).hex())
-        assertEquals("05 13 01 2c 00", Etube.unitCommand(5, 0x01, 0x2C, 0).hex())
+    @Test fun bleFramingAndUnitCommand() {
+        // BLE: byte 0 = sequence header 0x00, then control, then payload
+        assertEquals("00 13 33 04 00 01 01", Etube.unitCommand(0x33, 0x04, 0, 1, 1).hex()) // control 0x13 unit command
+        assertEquals("00 13 32 ac 10 01 00 00", Etube.unitCommand(0x32, 0xAC, 0x10, 1, 0, 0).hex())
+        assertEquals("00 03 00", Etube.ble(0x03, 0x00).hex())  // setProtocolMode(0,0)
+        assertEquals("00 0c 01", Etube.ble(0x0C, 0x01).hex())  // setPCConnectMode(1)
+    }
+
+    @Test fun sessionOpenIsProtocolThenPcConnect() {
+        assertEquals("00 03 00", Etube.SESSION_OPEN[0].second.hex())
+        assertEquals("00 0c 01", Etube.SESSION_OPEN[1].second.hex())
     }
 
     @Test fun replyDataVsNoData() {
@@ -38,21 +44,10 @@ class EtubeTest {
         assertEquals(null, Etube.replyHasData(Etube.hex("100201")))
     }
 
-    @Test fun setShiftModeCommandIsADcasFrame() {
-        // EXTM_RA_SFT_MODE_SEL_SET_C: group 0x0B, command 0xF8, 1 = manual / 0 = synchronized, trailing 0, DCAS-framed
-        assertEquals("bb 48 00 0b f8 01 00 4d bb", Etube.setShiftMode(true).hex())
-        assertEquals("bb 48 00 0b f8 00 00 4c bb", Etube.setShiftMode(false).hex())
-    }
-
-    @Test fun dcasFrameMatchesReconstruction() {
-        // unit command: flag 0xBB, [control 0x48, slot, group, cmd, params, FCS=(ctrl+Σdata+1)&0xFF], flag 0xBB
-        assertEquals("bb 48 00 01 2c 00 76 bb", Etube.dcasCommand(0, 0x01, 0x2C, 0).hex())
-        assertEquals("bb 48 00 32 ac 10 01 00 00 38 bb", Etube.dcasCommand(0, 0x32, 0xAC, 0x10, 1, 0, 0).hex())
-        // bus-setup frames (controlInfo + data), byte-exact from the decompiled bytecode:
-        assertEquals("bb 03 60 64 bb", Etube.dcasFrame(0x03, 0x60).hex()) // setProtocolMode 0x40|0x20
-        assertEquals("bb 04 05 bb", Etube.dcasFrame(0x04).hex())          // checkProtocolMode (no data)
-        assertEquals("bb 06 1f 26 bb", Etube.dcasFrame(0x06, 0x1F).hex()) // setTargetAddress 0x1F
-        assertEquals("bb 06 00 07 bb", Etube.dcasFrame(0x06, 0x00).hex()) // setTargetAddress slot 0
+    @Test fun setShiftModeIsABleUnitCommand() {
+        // group 0x0B, command 0xF8, 1 = manual / 0 = synchronized, trailing 0
+        assertEquals("00 13 0b f8 01 00", Etube.setShiftMode(true).hex())
+        assertEquals("00 13 0b f8 00 00", Etube.setShiftMode(false).hex())
     }
 
     @Test fun probeSweepHasDistinctLabels() {

@@ -371,16 +371,22 @@ object Di2 {
     /** gap between the swept read commands, so each reply lands under its own label */
     private const val MEMORY_SWEEP_STEP_MS = 1_000L
 
-    /** Developer options: log in and sweep every read command, so one capture shows every reply format. */
-    fun readMemory() = login("memory read: login with E-TUBE handshake") { sweepProbe(0) }
+    /** the ordered commands the current read sends after login: the session handshake, then reads or a write */
+    private var memorySweep: List<Pair<String, ByteArray>> = emptyList()
+
+    /** Developer options: log in, open the PCE session, then sweep every read command for one capture. */
+    fun readMemory() {
+        memorySweep = Etube.SESSION_OPEN + Etube.PROBE_READS
+        login("memory read: login with E-TUBE handshake") { sweepProbe(0) }
+    }
 
     /**
-     * Developer options: log in and set the shift mode (manual vs synchronized front shifting).
+     * Developer options: log in, open the PCE session, then set the shift mode (manual vs synchronized).
      * A write — it changes the derailleur, so it only runs when the rider taps it. Reversible with the shifter.
      */
-    fun setShiftMode(manual: Boolean) = login("set shift mode: ${if (manual) "manual" else "synchronized"}") {
-        DevLog.note("set shift mode ${if (manual) "manual" else "synchronized"}")
-        write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.setShiftMode(manual))
+    fun setShiftMode(manual: Boolean) {
+        memorySweep = Etube.SESSION_OPEN + ("set shift mode ${if (manual) "manual" else "synchronized"}" to Etube.setShiftMode(manual))
+        login("set shift mode: ${if (manual) "manual" else "synchronized"}") { sweepProbe(0) }
     }
 
     private fun login(note: String, action: () -> Unit) {
@@ -427,7 +433,7 @@ object Di2 {
     /** Sends read command [i] of the probe sweep, then schedules the next; the listener logs every reply. */
     private fun sweepProbe(i: Int) {
         if (!memoryPending) return
-        val reads = Etube.PROBE_READS
+        val reads = memorySweep
         val (label, bytes) = reads.getOrNull(i) ?: return
         memoryLastLabel = label
         DevLog.note("probe: $label")
