@@ -8,7 +8,7 @@ import org.json.JSONObject
 import java.io.File
 
 /** What the screens show of the ride in progress. */
-data class RideNow(val start: Long, val rear: Int, val front: Int, val ms: Long, val usage: Map<Gear, Long>)
+data class RideNow(val start: Long, val rear: Int, val front: Int, val ms: Long, val usage: Map<Gear, Long>, val meters: Double = 0.0)
 
 /**
  * Owns the ride in progress and the totals. A ride starts with the first gear report and ends
@@ -27,6 +27,7 @@ object Counter {
     private var ride: Ride? = null
     private var demo = false
     private var lastSave = 0L
+    private val track = Track()
 
     fun init(ctx: Context) {
         if (::file.isInitialized) return
@@ -49,12 +50,22 @@ object Counter {
     fun onGears(g: Gears) {
         val rear = g.rear ?: return
         val t = System.currentTimeMillis()
-        val r = ride ?: Ride(t).also { ride = it; startTicking() }
+        val r = ride ?: Ride(t).also { ride = it; track.reset(); startTicking() }
         r.onGear(Gear(g.front ?: 1, rear), t)
         publish(r)
     }
 
     fun linked() = main.removeCallbacks(endRide)
+
+    /** A GPS fix while the ride runs; only the distance is kept. */
+    fun onFix(lat: Double, lon: Double, accuracy: Float, time: Long) {
+        val r = ride ?: return
+        val d = track.add(lat, lon, accuracy, time)
+        if (d > 0) { r.meters += d; publish(r) }
+    }
+
+    /** the bike's distance so far in km, the ride in progress included; null before the first GPS metre */
+    fun km(): Double? = (totals.value.meters + (ride?.meters ?: 0.0)).takeIf { it > 0 }?.div(1000)
 
     fun linkLost() {
         val r = ride ?: return
@@ -99,7 +110,7 @@ object Counter {
     }
 
     private fun publish(r: Ride) {
-        now.value = RideNow(r.start, r.rearShifts, r.frontShifts, r.ms, HashMap(r.usage))
+        now.value = RideNow(r.start, r.rearShifts, r.frontShifts, r.ms, HashMap(r.usage), r.meters)
         if (System.currentTimeMillis() - lastSave > SAVE_EVERY_MS) save()
     }
 

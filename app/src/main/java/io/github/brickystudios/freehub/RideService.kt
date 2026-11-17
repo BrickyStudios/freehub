@@ -42,10 +42,8 @@ class RideService : Service() {
             // woken by Android with Freehub closed: set up what the app would, then look for the derailleur
             Counter.init(this)
             Power.init(this)
-            Strava.init(this)
             DevLog.on = Prefs.dev(this)
             Di2.start(this)
-            scope.launch { Strava.sync(this@RideService) }
             // the derailleur showed up but no ride came of it (someone moved the bike): give up quietly
             scope.launch {
                 delay(Counter.END_AFTER_MS)
@@ -55,8 +53,17 @@ class RideService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Fahrt", "Ride"), NotificationManager.IMPORTANCE_LOW))
         val first = note(texts(Di2.bike.value, Counter.now.value))
-        if (Build.VERSION.SDK_INT >= 29) startForeground(ID, first, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-        else startForeground(ID, first)
+        // with location access the service also counts the distance; Android refuses that type when started
+        // from the background without "allow all the time", so fall back to Bluetooth alone
+        if (Build.VERSION.SDK_INT >= 29) {
+            val bt = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            val gps = Gps.access(this) != Loc.NONE &&
+                runCatching { startForeground(ID, first, bt or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION) }.isSuccess
+            if (!gps) startForeground(ID, first, bt) else Gps.start(this)
+        } else {
+            startForeground(ID, first)
+            Gps.start(this)
+        }
         if (job == null) job = scope.launch {
             var rode = false
             var shown: Pair<String, String>? = null
@@ -77,6 +84,7 @@ class RideService : Service() {
     }
 
     override fun onDestroy() {
+        Gps.stop()
         scope.cancel()
         super.onDestroy()
     }

@@ -6,7 +6,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-/** One battery reading. km = the bike's odometer at that moment, when Strava is connected. */
+/** One battery reading. km = the GPS distance Freehub had counted by then, null before the first GPS metre. */
 data class Charge(val at: Long, val percent: Int, val km: Double?)
 
 /** How far the battery goes. Pure, so the JVM tests cover it. */
@@ -19,8 +19,7 @@ object Range {
 
     /**
      * km per percent, summed over all stretches without a charge in between where the odometer is known.
-     * The odometer only moves after a ride reaches Strava, so a single stretch can show a drop without km;
-     * the sum evens that out. Null until at least [MIN_DROP] percent were used.
+     * A single stretch can show a drop without km (a ride without location access); the sum evens that out. Null until at least [MIN_DROP] percent were used.
      */
     fun learned(log: List<Charge>): Double? {
         var km = 0.0

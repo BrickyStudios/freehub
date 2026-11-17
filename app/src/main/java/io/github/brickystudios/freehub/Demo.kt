@@ -50,7 +50,6 @@ object Demo {
     fun start(scope: CoroutineScope) {
         job?.cancel()
         Counter.setDemo(true, sample())
-        Strava.setDemo(true)
         Di2.setDemo(true)
         job = scope.launch {
             val rnd = Random(7)
@@ -75,7 +74,6 @@ object Demo {
         job = null
         Di2.setDemo(false)
         Counter.setDemo(false, Totals())
-        Strava.setDemo(false)
     }
 
     /** Twelve earlier rides for the statistics screen. */
@@ -96,6 +94,7 @@ object Demo {
                 rider.next()
             }
             r.tick(now)
+            r.meters = r.ms / 3_600_000.0 * 27_000 // a steady 27 km/h
             t = t.plus(r)
         }
         return t

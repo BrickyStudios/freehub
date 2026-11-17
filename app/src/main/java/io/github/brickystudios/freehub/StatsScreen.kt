@@ -32,7 +32,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, odo: Odo?, onReset: () -> Unit) {
+fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, onReset: () -> Unit) {
     // the ride in progress counts too, so the numbers move while you ride
     val usage = (totals.usage.keys + (ride?.usage?.keys ?: emptySet())).associateWith { (totals.usage[it] ?: 0) + (ride?.usage?.get(it) ?: 0) }
     val shifts = totals.shifts + (ride?.let { it.rear + it.front } ?: 0)
@@ -47,10 +47,9 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, odo: Odo?, onRese
             tr("Schaltvorgänge in ${totals.rides.size + (if (ride != null) 1 else 0)} Fahrten · ${duration(ms)}", "shifts in ${totals.rides.size + (if (ride != null) 1 else 0)} rides · ${duration(ms)}"),
             color = P.muted,
         )
-        // Strava's odometer counts every uploaded ride, also those Freehub never saw
-        if (odo != null) {
+        if (km != null) {
             Spacer(Modifier.height(20.dp))
-            Field(count(Math.round(odo.km)) + " km", tr("Gesamt auf dem Rad · ${odo.bike} (Strava)", "Bike total · ${odo.bike} (Strava)"), size = 44.sp)
+            Field(count(Math.round(km)) + " km", tr("Gesamt · per GPS gemessen", "Total · measured by GPS"), size = 44.sp)
         }
         Spacer(Modifier.height(24.dp))
         if (ms == 0L) {
@@ -81,7 +80,7 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, odo: Odo?, onRese
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     BodyText(fmt.format(Date(r.start)), weight = FontWeight.Medium)
-                    BodyText(duration(r.ms) + " · " + "%.0f".fmt(r.shifts / (r.ms / 3_600_000f).coerceAtLeast(0.01f)) + tr(" pro Stunde", " per hour"), color = P.muted, size = 14.sp)
+                    BodyText(duration(r.ms) + (if (r.meters > 0) " · " + kmText(r.meters) else "") + " · " + "%.0f".fmt(r.shifts / (r.ms / 3_600_000f).coerceAtLeast(0.01f)) + tr(" pro Stunde", " per hour"), color = P.muted, size = 14.sp)
                 }
                 Num(count(r.shifts.toLong()), 30.sp, weight = FontWeight.Bold)
             }

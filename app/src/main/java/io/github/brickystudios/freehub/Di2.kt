@@ -405,7 +405,7 @@ object Di2 {
             Sbi.BATTERY_LEVEL -> v.firstOrNull()?.let { b ->
                 val level = b.toInt() and 0xFF
                 bike.update { it.copy(battery = level) }
-                Power.record(level, Strava.odo.value?.km)
+                Power.record(level, Counter.km())
             }
             Sbi.FIRMWARE -> bike.update { it.copy(firmware = v.decodeToString().trim()) }
             Sbi.SERIAL -> bike.update { it.copy(serial = v.decodeToString().trim()) }

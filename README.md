@@ -24,8 +24,8 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 ## What it shows
 
 - **The gear you are in**, as teeth (50 × 17) and as positions (front 2/2, rear 7/12). The app reads chainrings and cassette from the derailleur. If it reports a pattern the app does not know, or the wrong one, pick yours under Bike → Drivetrain.
-- **Battery** of the Di2 system in percent, with the **range left in km** and when you last charged. The range starts from Shimano's figure (about 1,000 km per charge) and learns your real consumption once Strava is connected.
-- **Total kilometres of the bike**, optional, from Strava. The derailleur measures no distance, so Freehub reads the odometer Strava keeps per bike. It counts every ride you uploaded, also the ones Freehub never saw. You need your own Strava API app (Client ID and Secret from [strava.com/settings/api](https://www.strava.com/settings/api), callback domain `localhost`), because an open-source app cannot ship a secret.
+- **Battery** of the Di2 system in percent, with the **range left in km** and when you last charged. The range starts from Shimano's figure (about 1,000 km per charge) and learns your real consumption from the distance Freehub measures.
+- **Distance by GPS**, per ride and in total. The derailleur measures none, so Freehub uses the phone's own GPS while it counts a ride (no Google services needed). Only the distance is stored, never the route.
 - **Every shift, counted.** A multi-shift across three cogs counts as three. Per ride and all time, rear and front apart, plus shifts per hour.
 - **Where your time goes**: a heatmap of chainring × cog. Cross-chained combinations have an orange outline, and the share of time you spent in them is on top.
 - **Ratio and development** (metres per crank turn) for your tyre size.
@@ -33,7 +33,8 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 - **D-Fly buttons**: press one of the extra buttons on the hoods and the app shows which channel arrived.
 - **A tick for every cog.** While the app is open, each shift gives a short buzz per cog, like the pawls of a freehub clicking over the ratchet. You can switch it off.
 - **English or German**, whatever language your phone runs.
-- **A setup on first start** that walks through Bluetooth, connecting, crankset and cassette, auto start and Strava, so everything works from the first ride. It runs again from Bike → Settings.
+- **Swipe between the tabs**, or tap the glass bar at the bottom.
+- **A setup on first start** that walks through Bluetooth, connecting, crankset and cassette, auto start and GPS, so everything works from the first ride. It runs again from Bike → Settings.
 
 With "keep counting with the screen off" on, a notification holds the connection while the phone sits in your jersey pocket. The ride ends ten minutes after the derailleur goes to sleep.
 
@@ -66,9 +67,10 @@ Android 8.0 or newer, no Google services needed. Updates come through the app (s
 
 ## Privacy
 
-- The only connections are Bluetooth to your derailleur, one request to GitHub's release API at start if update checks are on, and Strava's API if you connect it (your bike list and odometer, nothing is uploaded).
+- The only connections are Bluetooth to your derailleur and, if update checks are on, one request to GitHub's release API at start.
+- GPS runs only while a ride is counted. Freehub keeps the distance, never a position or a route.
 - Rides and counters live in the app's private storage. Android backup and device transfer are switched off for them.
-- No Freehub account, no SHIMANO ID, no analytics, no ads. Strava is optional.
+- No account, no SHIMANO ID, no analytics, no ads.
 
 ## How it works
 

@@ -24,6 +24,8 @@ class Ride(val start: Long) {
         private set
     var frontShifts = 0
         private set
+    /** GPS distance while this ride was counted; 0 without location access */
+    var meters = 0.0
     val usage = HashMap<Gear, Long>()
     private var last: Gear? = null
     private var lastAt = start
@@ -59,13 +61,14 @@ class Ride(val start: Long) {
 
     fun toJson(): JSONObject = JSONObject()
         .put("start", start).put("end", end).put("rear", rearShifts).put("front", frontShifts)
-        .put("usage", usage.toJson())
+        .put("m", meters).put("usage", usage.toJson())
 
     companion object {
         fun fromJson(o: JSONObject) = Ride(o.getLong("start")).apply {
             end = o.getLong("end")
             rearShifts = o.getInt("rear")
             frontShifts = o.getInt("front")
+            meters = o.optDouble("m", 0.0)
             usage.putAll(o.optJSONObject("usage").toUsage())
         }
     }
@@ -77,6 +80,8 @@ data class Totals(
     val frontShifts: Long = 0,
     val usage: Map<Gear, Long> = emptyMap(),
     val rides: List<Ride> = emptyList(),
+    /** every GPS metre ever counted, also from rides that dropped off the list */
+    val meters: Double = 0.0,
 ) {
     val shifts get() = rearShifts + frontShifts
     val ms get() = usage.values.sum()
@@ -87,10 +92,11 @@ data class Totals(
         frontShifts = frontShifts + r.frontShifts,
         usage = (usage.keys + r.usage.keys).associateWith { (usage[it] ?: 0) + (r.usage[it] ?: 0) },
         rides = (listOf(r) + rides).take(MAX_RIDES),
+        meters = meters + r.meters,
     )
 
     fun toJson(): JSONObject = JSONObject()
-        .put("rear", rearShifts).put("front", frontShifts).put("usage", usage.toJson())
+        .put("rear", rearShifts).put("front", frontShifts).put("m", meters).put("usage", usage.toJson())
         .put("rides", JSONArray().apply { rides.forEach { put(it.toJson()) } })
 
     companion object {
@@ -100,6 +106,7 @@ data class Totals(
             rearShifts = o.optLong("rear"),
             frontShifts = o.optLong("front"),
             usage = o.optJSONObject("usage").toUsage(),
+            meters = o.optDouble("m", 0.0),
             rides = o.optJSONArray("rides")?.let { a -> (0 until a.length()).map { Ride.fromJson(a.getJSONObject(it)) } } ?: emptyList(),
         )
     }

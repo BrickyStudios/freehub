@@ -305,6 +305,9 @@ fun duration(ms: Long): String {
     }
 }
 
+/** metres as "18,4 km" (one decimal below 100 km) */
+fun kmText(m: Double) = (if (m < 100_000) "%.1f".fmt(m / 1000) else count(Math.round(m / 1000))) + " km"
+
 /** "≈ 820 km": an estimate, rounded to ten so it does not pretend to be exact */
 fun approxKm(km: Double) = "≈ " + count((Math.round(km / 10) * 10)) + " km"
 

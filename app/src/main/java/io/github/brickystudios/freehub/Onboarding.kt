@@ -31,9 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-private enum class Step { WELCOME, BLUETOOTH, CONNECT, DRIVETRAIN, AUTO, STRAVA, DONE }
+private enum class Step { WELCOME, BLUETOOTH, CONNECT, DRIVETRAIN, AUTO, GPS, DONE }
 
 /**
  * The first start: one screen per thing Freehub needs, so every feature works from the first ride.
@@ -41,10 +40,9 @@ private enum class Step { WELCOME, BLUETOOTH, CONNECT, DRIVETRAIN, AUTO, STRAVA,
  */
 @Composable
 fun Onboarding(
-    bike: Bike, gears: Gears?, granted: Boolean, autoStart: Boolean?,
-    onAllow: () -> Unit, onBluetooth: () -> Unit, onAutoStart: (Boolean) -> Unit, onDone: () -> Unit,
+    bike: Bike, gears: Gears?, granted: Boolean, autoStart: Boolean?, loc: Loc,
+    onAllow: () -> Unit, onBluetooth: () -> Unit, onAutoStart: (Boolean) -> Unit, onLocation: () -> Unit, onDone: () -> Unit,
 ) {
-    val odo by Strava.odo.collectAsStateWithLifecycle()
     val steps = Step.entries.filter { it != Step.AUTO || autoStart != null }
     var i by rememberSaveable { mutableIntStateOf(0) }
     val step = steps[i]
@@ -53,6 +51,7 @@ fun Onboarding(
     // move on by itself once the thing a step asks for has happened
     LaunchedEffect(step, granted) { if (step == Step.BLUETOOTH && granted) next() }
     LaunchedEffect(step, autoStart) { if (step == Step.AUTO && autoStart == true) next() }
+    LaunchedEffect(step, loc) { if (step == Step.GPS && loc == Loc.ALWAYS) next() }
 
     Column(Modifier.fillMaxSize().background(P.bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -110,9 +109,16 @@ fun Onboarding(
                         ))
                         if (!granted) Text(tr("Dafür braucht Freehub zuerst Bluetooth.", "This needs Bluetooth first."), warn = true)
                     }
-                    Step.STRAVA -> {
-                        Title(tr("Kilometer", "Distance"))
-                        Kilometres(demo = false, odo = odo, when_ = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, locale()))
+                    Step.GPS -> {
+                        Title(tr("Kilometer messen", "Measure distance"))
+                        Text(tr(
+                            "Das Schaltwerk misst keine Strecke. Freehub misst sie per GPS, solange es eine Fahrt zählt. Gespeichert wird nur die Distanz, nie die Route. Daraus lernt auch die Akku-Reichweite.",
+                            "The derailleur measures no distance. Freehub measures it by GPS while it counts a ride. Only the distance is stored, never the route. The battery range learns from it too.",
+                        ))
+                        if (loc == Loc.IN_USE) Text(tr(
+                            "Jetzt noch „immer erlauben“, damit es auch mit geschlossener App misst.",
+                            "Now allow it \"all the time\", so it measures with the app closed too.",
+                        ), warn = true)
                     }
                     Step.DONE -> {
                         Title(tr("Fertig.", "Done."))
@@ -129,6 +135,11 @@ fun Onboarding(
                 Link.CONNECTED -> tr("Weiter", "Next") to { next() }
                 Link.NO_BLUETOOTH -> tr("Bluetooth einschalten", "Turn on Bluetooth") to onBluetooth
                 else -> tr("Später verbinden", "Connect later") to { next() }
+            }
+            Step.GPS -> when (loc) {
+                Loc.NONE -> tr("Standort erlauben", "Allow location") to onLocation
+                Loc.IN_USE -> tr("Immer erlauben", "Allow all the time") to onLocation
+                Loc.ALWAYS -> tr("Weiter", "Next") to { next() }
             }
             Step.AUTO -> if (granted) tr("Einschalten", "Switch on") to { onAutoStart(true) } else tr("Weiter", "Next") to { next() }
             Step.DONE -> tr("Freehub öffnen", "Open Freehub") to onDone

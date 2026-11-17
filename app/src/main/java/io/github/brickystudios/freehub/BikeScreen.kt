@@ -35,7 +35,7 @@ private val WHEELS = listOf("700×25C" to 2105, "700×28C" to 2136, "700×30C" t
 
 @Composable
 fun BikeScreen(
-    bike: Bike, gears: Gears?, odo: Odo?, power: List<Charge>,
+    bike: Bike, gears: Gears?, km: Double?, power: List<Charge>, loc: Loc, onLocation: () -> Unit,
     autoStart: Boolean?, onAutoStart: (Boolean) -> Unit,
     onDemo: (Boolean) -> Unit, onCheckUpdate: () -> Unit, updateNote: String?, onSetup: () -> Unit,
 ) {
@@ -65,7 +65,7 @@ fun BikeScreen(
         )
         Info(tr("Zuletzt geladen", "Last charged"), Range.lastCharged(power)?.let { when_.format(Date(it)) } ?: "–")
         if (learned == null) BodyText(
-            if (odo == null) tr("Mit Strava verbunden lernt Freehub, wie weit dein Akku wirklich reicht.", "Connected to Strava, Freehub learns how far your battery really goes.")
+            if (loc == Loc.NONE) tr("Mit GPS-Kilometern lernt Freehub, wie weit dein Akku wirklich reicht.", "With GPS distance, Freehub learns how far your battery really goes.")
             else tr("Nach ein paar Fahrten rechnet Freehub mit deinem echten Verbrauch.", "After a few rides Freehub uses your real consumption."),
             Modifier.padding(top = 8.dp), color = P.faint, size = 14.sp,
         )
@@ -93,7 +93,7 @@ fun BikeScreen(
         Spacer(Modifier.height(28.dp))
         Label(tr("Kilometer", "Distance"))
         Spacer(Modifier.height(4.dp))
-        Kilometres(bike.demo, odo, when_)
+        Kilometres(km, loc, onLocation)
 
         Spacer(Modifier.height(28.dp))
         Label(tr("Tastentest", "Button test"))
@@ -256,50 +256,31 @@ private fun shareCapture(ctx: android.content.Context) {
     ctx.startActivity(Intent.createChooser(send, tr("Mitschnitt teilen", "Share capture")))
 }
 
-/** The derailleur measures no distance: the bike's odometer comes from Strava. */
+/**
+ * The derailleur measures no distance: Freehub counts it by GPS while a ride runs.
+ * Only the distance is stored, never the route.
+ */
 @Composable
-internal fun Kilometres(demo: Boolean, odo: Odo?, when_: DateFormat) {
-    val ctx = LocalContext.current
-    val error by Strava.error.collectAsStateWithLifecycle()
-    val bikes by Strava.bikes.collectAsStateWithLifecycle()
-    if (demo || odo != null || Strava.connected(ctx)) {
-        if (odo != null) {
-            SettingRow(
-                tr("Rad bei Strava", "Bike on Strava"),
-                if (bikes.size > 1) tr("tippen zum Wechseln", "tap to change") else tr("Stand ", "As of ") + when_.format(Date(odo.at)),
-                onClick = if (bikes.size > 1 && !demo) ({
-                    val i = bikes.indexOfFirst { it.name == odo.bike }
-                    Strava.choose(ctx, bikes[(i + 1) % bikes.size])
-                }) else null,
-            ) { BodyText(odo.bike, weight = FontWeight.SemiBold) }
-            Divider()
-            Info(tr("Gesamt", "Total"), count(Math.round(odo.km)) + " km")
+internal fun Kilometres(km: Double?, loc: Loc, onLocation: () -> Unit) {
+    Info(tr("Gesamt", "Total"), km?.let { count(Math.round(it)) + " km" } ?: "–")
+    BodyText(
+        tr(
+            "Freehub misst die Strecke per GPS, solange es eine Fahrt zählt. Gespeichert wird nur die Distanz, nie die Route.",
+            "Freehub measures the distance by GPS while it counts a ride. Only the distance is stored, never the route.",
+        ),
+        Modifier.padding(top = 8.dp), color = P.muted, size = 14.sp,
+    )
+    when (loc) {
+        Loc.NONE -> Action(tr("Standort erlauben", "Allow location"), Modifier.padding(top = 12.dp), onClick = onLocation)
+        Loc.IN_USE -> {
+            BodyText(
+                tr("Misst gerade nur bei offener App. Für jede Fahrt mit Auto-Start: Standort „immer erlauben“.", "Measures only while the app is open. For every ride with auto start: allow location \"all the time\"."),
+                Modifier.padding(top = 8.dp), color = P.warn, size = 14.sp,
+            )
+            Action(tr("Immer erlauben", "Allow all the time"), Modifier.padding(top = 12.dp), primary = false, onClick = onLocation)
         }
-        if (!demo) Action(tr("Strava trennen", "Disconnect Strava"), Modifier.padding(top = 12.dp), primary = false) { Strava.disconnect(ctx) }
-    } else {
-        BodyText(
-            tr(
-                "Das Schaltwerk misst keine Strecke. Freehub holt den km-Stand deines Rads von Strava, auch von Fahrten ohne Freehub. Dafür brauchst du eine eigene Strava-API-App: unter strava.com/settings/api anlegen, als Callback-Domain „localhost“ eintragen.",
-                "The derailleur measures no distance. Freehub takes your bike's odometer from Strava, rides without Freehub included. You need your own Strava API app for that: create it at strava.com/settings/api with \"localhost\" as callback domain.",
-            ),
-            color = P.muted, size = 15.sp,
-        )
-        Spacer(Modifier.height(10.dp))
-        var id by remember { mutableStateOf(Strava.clientId(ctx)) }
-        var secret by remember { mutableStateOf("") }
-        Input(id, { id = it.filter(Char::isDigit) }, "Client ID", digits = true)
-        Input(secret, { secret = it.trim() }, "Client Secret", secret = true)
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Action(tr("Verbinden", "Connect"), Modifier.weight(1f), primary = id.isNotBlank() && secret.isNotBlank()) {
-                if (id.isNotBlank() && secret.isNotBlank()) Strava.login(ctx, id, secret)
-            }
-            Action(tr("API-Seite", "API page"), Modifier.weight(1f), primary = false) {
-                ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(StravaApi.SETTINGS)))
-            }
-        }
+        Loc.ALWAYS -> Unit
     }
-    error?.let { BodyText(it, Modifier.padding(top = 10.dp), color = P.warn, size = 15.sp) }
 }
 
 /** Tyre size for the development, tap to step through. */

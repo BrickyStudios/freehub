@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, odo: Odo?, power: List<Charge>, needsPermission: Boolean, onAllow: () -> Unit, onBluetooth: () -> Unit, onDemo: () -> Unit) {
+fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, km: Double?, power: List<Charge>, needsPermission: Boolean, onAllow: () -> Unit, onBluetooth: () -> Unit, onDemo: () -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)) {
         StatusLine(bike)
         Spacer(Modifier.height(20.dp))
@@ -57,7 +57,7 @@ fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, odo: Odo?, power: List<
             bike.link == Link.NO_BLUETOOTH -> Hint(tr("Bluetooth ist aus", "Bluetooth is off"), tr("Freehub spricht per Bluetooth mit dem Schaltwerk.", "Freehub talks to the derailleur over Bluetooth."), tr("Einschalten", "Turn on"), onBluetooth, onDemo)
             g == null && bike.link != Link.CONNECTED -> Searching(onDemo)
             g == null -> Hint(tr("Verbunden", "Connected"), tr("Schalt einmal, dann schickt das Schaltwerk den Gang.", "Shift once and the derailleur sends the gear."), null, {}, null)
-            else -> Cockpit(g, ride, wheelMm, bike.buttons, bike.battery, bike.battery?.let { Range.remainingKm(it, power) }, odo)
+            else -> Cockpit(g, ride, wheelMm, bike.buttons, bike.battery, bike.battery?.let { Range.remainingKm(it, power) }, km)
         }
         TabBarRoom()
     }
@@ -80,7 +80,7 @@ private fun StatusLine(bike: Bike) {
 }
 
 @Composable
-private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.Buttons?, battery: Int?, rangeKm: Double?, odo: Odo?) {
+private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.Buttons?, battery: Int?, rangeKm: Double?, km: Double?) {
     val front = g.frontTeeth
     val rear = g.rearTeeth
     val still = reducedMotion()
@@ -119,7 +119,7 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
         val low = (battery ?: 100) <= 20
         Field(battery?.let { "$it %" } ?: "–", tr("Akku Di2", "Di2 battery"), Modifier.weight(1f), color = if (low) P.warn else P.ink)
         Field(rangeKm?.let(::approxKm) ?: "–", tr("Reicht noch", "Range left"), Modifier.weight(1f))
-        if (odo != null) Field(count(Math.round(odo.km)) + " km", tr("Rad gesamt", "Bike total"), Modifier.weight(1f))
+        if (km != null) Field(count(Math.round(km)) + " km", tr("Rad gesamt", "Bike total"), Modifier.weight(1f))
         else Spacer(Modifier.weight(1f))
     }
     Spacer(Modifier.height(20.dp))
@@ -131,7 +131,7 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
             Row(verticalAlignment = Alignment.Bottom) {
                 Odometer(n, 56.sp)
                 Spacer(Modifier.width(10.dp))
-                BodyText(shiftsWord(n), color = P.muted, modifier = Modifier.padding(bottom = 8.dp))
+                BodyText(shiftsWord(n) + (ride?.meters?.takeIf { it > 0 }?.let { " · " + kmText(it) } ?: ""), color = P.muted, modifier = Modifier.padding(bottom = 8.dp))
             }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

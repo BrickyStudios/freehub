@@ -24,7 +24,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -77,6 +79,9 @@ class MainActivity : ComponentActivity() {
     private val askBluetooth = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { Di2.start(this) }
     private var autoStart by mutableStateOf(false)
     private var onboarded by mutableStateOf(true)
+    private var loc by mutableStateOf(Loc.NONE)
+    private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { loc = Gps.access(this) }
+    private val askAlways = registerForActivityResult(ActivityResultContracts.RequestPermission()) { loc = Gps.access(this) }
     private val pickDerailleur = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
         if (canAutoStart && r.resultCode == RESULT_OK) autoStart = AutoStart.picked(this, r.data)
     }
@@ -87,13 +92,13 @@ class MainActivity : ComponentActivity() {
         Lang.init(this)
         Counter.init(this)
         Power.init(this)
-        Strava.init(this)
+        // Strava is gone since 0.5: drop the stored client secret and tokens instead of leaving them behind
+        deleteSharedPreferences("strava")
         DevLog.on = Prefs.dev(this)
         granted = hasPermissions(this)
         if (canAutoStart) autoStart = AutoStart.on(this)
         onboarded = Prefs.onboarded(this)
         setContent { FreehubTheme { App() } }
-        fromStrava(intent)
         if (Prefs.updates(this) && !BuildConfig.DEBUG) lifecycleScope.launch { Updater.check(this@MainActivity, manual = false) }
     }
 
@@ -101,22 +106,16 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         granted = hasPermissions(this)
         if (granted && !Di2.bike.value.demo) Di2.start(this)
-        lifecycleScope.launch { Strava.sync(this@MainActivity) }
+        loc = Gps.access(this)
     }
 
     override fun onStart() { super.onStart(); visible = true }
     override fun onStop() { visible = false; super.onStop() }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        fromStrava(intent)
-    }
-
-    /** Strava sends the rider back as freehub://localhost?code=… */
-    private fun fromStrava(i: Intent?) {
-        val uri = i?.data?.takeIf { it.scheme == "freehub" } ?: return
-        setIntent(Intent(this, MainActivity::class.java)) // a rotation must not replay the code
-        lifecycleScope.launch { Strava.finishLogin(this@MainActivity, uri) }
+    /** First "while in use", then (Android 10+) "all the time", which Android only grants as a second step. */
+    private fun requestLocation() {
+        if (loc == Loc.NONE) askLocation.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+        else if (Build.VERSION.SDK_INT >= 29) askAlways.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
     }
 
     private fun switchAutoStart(on: Boolean) {
@@ -138,9 +137,13 @@ class MainActivity : ComponentActivity() {
         val totals by Counter.totals.collectAsStateWithLifecycle()
         val update by Updater.state.collectAsStateWithLifecycle()
         val note by Updater.note.collectAsStateWithLifecycle()
-        val odo by Strava.odo.collectAsStateWithLifecycle()
         val power by Power.log.collectAsStateWithLifecycle()
-        var tab by rememberSaveable { mutableIntStateOf(0) }
+        // the tabs sit side by side: swipe left or right, or tap the bar
+        val pager = rememberPagerState { 3 }
+        val tab = pager.currentPage
+        val still = reducedMotion()
+        // the bike's GPS distance in km, the ride in progress included; null before the first metre
+        val km = ((totals.meters + (ride?.meters ?: 0.0)) / 1000).takeIf { it > 0 }
         // so the statistics can name the teeth when the bike is not connected
         val known = bike.gears ?: remember(bike.link, tab) { Prefs.lastGears(ctx) }
 
@@ -148,15 +151,15 @@ class MainActivity : ComponentActivity() {
             if (bike.link == Link.CONNECTED && !bike.demo && Prefs.background(ctx)) {
                 ContextCompat.startForegroundService(ctx, Intent(ctx, RideService::class.java))
             }
-            if (bike.link == Link.CONNECTED && !bike.demo) Strava.sync(ctx)
         }
 
         if (!onboarded) {
             Onboarding(
-                bike, known, granted, autoStart.takeIf { canAutoStart },
+                bike, known, granted, autoStart.takeIf { canAutoStart }, loc,
                 onAllow = { askPermissions.launch(permissions()) },
                 onBluetooth = { askBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
                 onAutoStart = ::switchAutoStart,
+                onLocation = ::requestLocation,
                 onDone = { Prefs.setOnboarded(ctx, true); onboarded = true },
             )
             return
@@ -167,18 +170,17 @@ class MainActivity : ComponentActivity() {
         Box(Modifier.fillMaxSize().background(P.bg)) {
             Box(Modifier.fillMaxSize().layerBackdrop(backdrop)) {
                 Ambient()
-                // a quick crossfade: tabs change often, so no slide and no delay
-                Crossfade(tab, Modifier.fillMaxSize().statusBarsPadding(), animationSpec = tween(120), label = "tab") { tab ->
-                    when (tab) {
+                HorizontalPager(pager, Modifier.fillMaxSize().statusBarsPadding(), beyondViewportPageCount = 1) { page ->
+                    when (page) {
                         0 -> LiveScreen(
-                            bike, ride, Prefs.wheel(ctx), odo, power, needsPermission = !granted && !bike.demo,
+                            bike, ride, Prefs.wheel(ctx), km, power, needsPermission = !granted && !bike.demo,
                             onAllow = { askPermissions.launch(permissions()) },
                             onBluetooth = { askBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
                             onDemo = { Demo.start(lifecycleScope) },
                         )
-                        1 -> StatsScreen(totals, ride, known, odo, onReset = Counter::reset)
+                        1 -> StatsScreen(totals, ride, known, km, onReset = Counter::reset)
                         else -> BikeScreen(
-                            bike, known, odo, power,
+                            bike, known, km, power, loc, onLocation = ::requestLocation,
                             autoStart = autoStart.takeIf { canAutoStart && granted },
                             onAutoStart = ::switchAutoStart,
                             onDemo = { on -> if (on) Demo.start(lifecycleScope) else { Demo.stop(); if (granted) Di2.start(ctx) } },
@@ -201,7 +203,10 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
-                NavBar(tab, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 40.dp, end = 40.dp, bottom = 12.dp)) { tab = it }
+                NavBar(
+                    { pager.currentPage + pager.currentPageOffsetFraction }, tab,
+                    Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 40.dp, end = 40.dp, bottom = 12.dp),
+                ) { scope.launch { if (still) pager.scrollToPage(it) else pager.animateScrollToPage(it) } }
             }
         }
     }
@@ -223,14 +228,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** A floating glass capsule; one tinted pill slides to the chosen tab (critically damped, no bounce). */
+/** A floating glass capsule; the tinted pill follows the pages 1:1 while you swipe. */
 @Composable
-private fun NavBar(tab: Int, modifier: Modifier, onTab: (Int) -> Unit) {
+private fun NavBar(position: () -> Float, tab: Int, modifier: Modifier, onTab: (Int) -> Unit) {
     val items = listOf(tr("Live", "Live"), tr("Statistik", "Stats"), tr("Rad", "Bike"))
     BoxWithConstraints(modifier.fillMaxWidth().height(60.dp).glass()) {
         val third = maxWidth / items.size
-        val x by animateDpAsState(third * tab, if (reducedMotion()) snap() else spring(1f, 600f), label = "tabmark")
-        Box(Modifier.offset(x = x).width(third).fillMaxHeight().padding(5.dp).background(P.accent.copy(alpha = 0.16f), Pill))
+        Box(Modifier.offset { IntOffset((third * position()).roundToPx(), 0) }.width(third).fillMaxHeight().padding(5.dp).background(P.accent.copy(alpha = 0.16f), Pill))
         Row(Modifier.fillMaxSize()) {
             items.forEachIndexed { i, label ->
                 val on = i == tab
