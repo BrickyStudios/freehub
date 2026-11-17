@@ -59,6 +59,7 @@ fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, odo: Odo?, power: List<
             g == null -> Hint(tr("Verbunden", "Connected"), tr("Schalt einmal, dann schickt das Schaltwerk den Gang.", "Shift once and the derailleur sends the gear."), null, {}, null)
             else -> Cockpit(g, ride, wheelMm, bike.buttons, bike.battery, bike.battery?.let { Range.remainingKm(it, power) }, odo)
         }
+        TabBarRoom()
     }
 }
 

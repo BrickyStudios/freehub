@@ -36,8 +36,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
+import android.os.Build
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Shape
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.shapes.Capsule
+import com.kyant.shapes.RoundedRectangle
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.graphics.SolidColor
@@ -66,6 +83,8 @@ data class Palette(
     val track: Color,
     val ink: Color, val muted: Color, val faint: Color,
     val accent: Color, val onAccent: Color, val warn: Color,
+    /** tint of the floating glass: see-through where Android can blur behind it */
+    val glass: Color,
 )
 
 val Carbon = Palette(
@@ -73,6 +92,7 @@ val Carbon = Palette(
     track = Color(0xFF262A2F),
     ink = Color(0xFFF3F2EE), muted = Color(0xFFA0A4AA), faint = Color(0xFF62676E),
     accent = Color(0xFFFF4D94), onAccent = Color(0xFF1A0710), warn = Color(0xFFFF9F43),
+    glass = Color(0xA61F2226),
 )
 
 val Paper = Palette(
@@ -80,6 +100,7 @@ val Paper = Palette(
     track = Color(0xFFD6D3CB),
     ink = Color(0xFF121316), muted = Color(0xFF575B62), faint = Color(0xFF8E9298),
     accent = Color(0xFFD81B6A), onAccent = Color(0xFFFFFFFF), warn = Color(0xFFB4410B),
+    glass = Color(0xB8FFFFFF),
 )
 
 val LocalPalette = staticCompositionLocalOf { Carbon }
@@ -99,6 +120,38 @@ val Body = FontFamily(
 fun FreehubTheme(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalPalette provides if (isSystemInDarkTheme()) Carbon else Paper, content = content)
 }
+
+/** iOS-style continuous corners: the curve eases into the straight edge instead of meeting it at a kink. */
+val Card: Shape = RoundedRectangle(22.dp)
+val Pill: Shape = Capsule()
+
+/** What scrolls behind the floating chrome, for the glass to blur and bend. */
+val LocalBackdrop = staticCompositionLocalOf<LayerBackdrop?> { null }
+
+/**
+ * Liquid Glass (github.com/Kyant0/AndroidLiquidGlass, Apache-2.0): blur from Android 12, refraction at the rim
+ * from Android 13. Older phones only get the tint, so it turns nearly solid there to keep text readable.
+ * Only for chrome that floats over content; glass on glass loses all legibility.
+ */
+@Composable
+fun Modifier.glass(shape: Shape = Pill): Modifier {
+    val tint = if (Build.VERSION.SDK_INT >= 31) P.glass else P.raised.copy(alpha = 0.96f)
+    val backdrop = LocalBackdrop.current ?: return background(tint, shape)
+    return drawBackdrop(
+        backdrop = backdrop,
+        shape = { shape },
+        effects = {
+            vibrancy()
+            blur(22.dp.toPx())
+            lens(12.dp.toPx(), 24.dp.toPx())
+        },
+        onDrawSurface = { drawRect(tint) },
+    )
+}
+
+/** Space at the end of a screen so its last line can scroll up past the floating tab bar. */
+@Composable
+fun TabBarRoom() = Spacer(Modifier.navigationBarsPadding().height(96.dp))
 
 /** Small caps-style label above a value. */
 @Composable
@@ -130,24 +183,20 @@ fun Field(value: String, label: String, modifier: Modifier = Modifier, size: Tex
 
 @Composable
 fun Panel(modifier: Modifier = Modifier, pad: Dp = 18.dp, content: @Composable () -> Unit) {
-    Box(
-        modifier.fillMaxWidth().background(P.surface, RoundedCornerShape(6.dp)).border(1.dp, P.line, RoundedCornerShape(6.dp)).padding(pad),
-    ) { content() }
+    Box(modifier.fillMaxWidth().background(P.surface, Card).padding(pad)) { content() }
 }
 
 @Composable
 fun Divider(modifier: Modifier = Modifier) = Box(modifier.fillMaxWidth().padding(vertical = 0.dp).heightIn(min = 1.dp, max = 1.dp).background(P.line))
 
-/** Primary action: a pink slab. 48 dp tall for gloves. */
+/** Primary action: a pink capsule; secondary: a quiet filled one. 52 dp tall for gloves. */
 @Composable
 fun Action(text: String, modifier: Modifier = Modifier, primary: Boolean = true, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(6.dp)
     val source = remember { MutableInteractionSource() }
     Box(
         modifier.heightIn(min = 52.dp)
             .pressable(source)
-            .background(if (primary) P.accent else Color.Transparent, shape)
-            .border(1.dp, if (primary) P.accent else P.line, shape)
+            .background(if (primary) P.accent else P.raised, Pill)
             .clickable(source, indication = null, role = Role.Button, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
@@ -200,12 +249,12 @@ fun Input(value: String, onChange: (String) -> Unit, label: String, secret: Bool
     }
 }
 
-/** On/off switch drawn in the app's own style. */
+/** On/off switch in iOS proportions; the thumb slides with a critically damped spring, no bounce. */
 @Composable
 fun Toggle(on: Boolean) {
-    val track = if (on) P.accent else P.raised
-    Box(Modifier.size(width = 46.dp, height = 28.dp).background(track, RoundedCornerShape(14.dp)).border(1.dp, if (on) P.accent else P.line, RoundedCornerShape(14.dp)).padding(3.dp)) {
-        Box(Modifier.align(if (on) Alignment.CenterEnd else Alignment.CenterStart).size(22.dp).background(if (on) P.onAccent else P.muted, CircleShape))
+    val x by animateDpAsState(if (on) 20.dp else 0.dp, if (reducedMotion()) snap() else spring(1f, Spring.StiffnessMediumLow), label = "toggle")
+    Box(Modifier.size(width = 51.dp, height = 31.dp).background(if (on) P.accent else P.track, Pill).padding(2.dp)) {
+        Box(Modifier.offset(x = x).size(27.dp).shadow(2.dp, CircleShape).background(Color.White, CircleShape))
     }
 }
 
@@ -226,6 +275,9 @@ object Prefs {
     fun setRings(c: Context, pattern: Int) = p(c).edit().putInt("rings", pattern).apply()
     fun cogs(c: Context) = p(c).getInt("cogs", -1)
     fun setCogs(c: Context, pattern: Int) = p(c).edit().putInt("cogs", pattern).apply()
+    /** the first-start setup ran through (or was skipped) */
+    fun onboarded(c: Context) = p(c).getBoolean("onboarded", false)
+    fun setOnboarded(c: Context, done: Boolean) = p(c).edit().putBoolean("onboarded", done).apply()
     /** developer options: Bluetooth capture, read all, read memory */
     fun dev(c: Context) = p(c).getBoolean("dev", false)
     fun setDev(c: Context, on: Boolean) = p(c).edit().putBoolean("dev", on).apply()

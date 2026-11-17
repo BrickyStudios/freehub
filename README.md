@@ -33,6 +33,7 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 - **D-Fly buttons**: press one of the extra buttons on the hoods and the app shows which channel arrived.
 - **A tick for every cog.** While the app is open, each shift gives a short buzz per cog, like the pawls of a freehub clicking over the ratchet. You can switch it off.
 - **English or German**, whatever language your phone runs.
+- **A setup on first start** that walks through Bluetooth, connecting, crankset and cassette, auto start and Strava, so everything works from the first ride. It runs again from Bike → Settings.
 
 With "keep counting with the screen off" on, a notification holds the connection while the phone sits in your jersey pocket. The ride ends ten minutes after the derailleur goes to sleep.
 
@@ -92,6 +93,7 @@ The unit tests cover the protocol parsing and the shift counting with byte strin
 
 - [BikeBridge](https://codeberg.org/bg443/BikeBridge) (GPL-3.0) worked out the E-TUBE service and its login for Shimano e-bike motors; Freehub uses its handshake and keys.
 - [shimano-di2-media-controls](https://github.com/NitorCreations/shimano-di2-media-controls) decoded the D-Fly buttons.
+- [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) by Kyant (Apache-2.0) draws the glass tab bar.
 - [Saira](https://github.com/Omnibus-Type/Saira) by Omnibus-Type, SIL Open Font License.
 
 Shimano, Di2, D-Fly and E-TUBE are trademarks of SHIMANO INC. Freehub is an independent project and has no connection to Shimano.

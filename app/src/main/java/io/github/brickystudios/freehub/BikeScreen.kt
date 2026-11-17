@@ -37,7 +37,7 @@ private val WHEELS = listOf("700×25C" to 2105, "700×28C" to 2136, "700×30C" t
 fun BikeScreen(
     bike: Bike, gears: Gears?, odo: Odo?, power: List<Charge>,
     autoStart: Boolean?, onAutoStart: (Boolean) -> Unit,
-    onDemo: (Boolean) -> Unit, onCheckUpdate: () -> Unit, updateNote: String?,
+    onDemo: (Boolean) -> Unit, onCheckUpdate: () -> Unit, updateNote: String?, onSetup: () -> Unit,
 ) {
     val ctx = LocalContext.current
     val when_ = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale()) }
@@ -74,7 +74,7 @@ fun BikeScreen(
         Label(tr("Antrieb", "Drivetrain"))
         Spacer(Modifier.height(4.dp))
         Info(tr("Seriennummer", "Serial number"), bike.serial ?: "–")
-        Drivetrain(bike, gears)
+        DrivetrainPicker(bike, gears)
         Info(tr("Schaltmodus", "Shift mode"), gears?.let { modeName(it.mode) } ?: "–")
         Info(tr("Multi-Shift-Intervall", "Multi-shift interval"), gears?.multiShiftInterval?.toString() ?: "–")
         Info(
@@ -122,17 +122,7 @@ fun BikeScreen(
         }
         Spacer(Modifier.height(28.dp))
         Label(tr("Einstellungen", "Settings"))
-        var wheel by remember { mutableIntStateOf(Prefs.wheel(ctx)) }
-        SettingRow(
-            tr("Reifen", "Tyre"),
-            tr("für die Entfaltung · tippen zum Wechseln", "for development · tap to change"),
-            onClick = {
-                val i = WHEELS.indexOfFirst { it.second == wheel }
-                wheel = WHEELS[(i + 1) % WHEELS.size].second
-                Prefs.setWheel(ctx, wheel)
-            },
-        ) { BodyText(WHEELS.firstOrNull { it.second == wheel }?.first ?: "$wheel mm", weight = FontWeight.SemiBold) }
-        Divider()
+        TyreRow()
         var lang by remember { mutableStateOf(Prefs.lang(ctx)) }
         SettingRow(tr("Sprache", "Language"), tr("tippen zum Wechseln", "tap to change"), onClick = {
             lang = when (lang) { null -> "de"; "de" -> "en"; else -> null }
@@ -174,6 +164,8 @@ fun BikeScreen(
         ) { Toggle(dev) }
         if (dev) Developer(bike)
         Divider()
+        SettingRow(tr("Einrichtung noch einmal", "Run the setup again"), tr("Bluetooth, Antrieb, Auto-Start, Strava", "Bluetooth, drivetrain, auto start, Strava"), onClick = onSetup)
+        Divider()
         SettingRow(tr("Quellcode und Protokoll", "Source code and protocol"), "github.com/BrickyStudios/freehub", onClick = {
             ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/BrickyStudios/freehub")))
         })
@@ -182,13 +174,13 @@ fun BikeScreen(
             "Freehub ${BuildConfig.VERSION_NAME} · GPL-3.0 · " + tr("Nicht von Shimano. Shimano und Di2 sind Marken der SHIMANO INC.", "Not made by Shimano. Shimano and Di2 are trademarks of SHIMANO INC."),
             color = P.faint, size = 13.sp,
         )
-        Spacer(Modifier.height(24.dp))
+        TabBarRoom()
     }
 }
 
 /** Crank and cassette: as reported, or picked by hand when the derailleur reports none we know (or a wrong one). */
 @Composable
-private fun Drivetrain(bike: Bike, gears: Gears?) {
+internal fun DrivetrainPicker(bike: Bike, gears: Gears?) {
     val ctx = LocalContext.current
     if (bike.demo) {
         Info(tr("Kurbel", "Crankset"), gears?.chainrings?.joinToString("/") ?: "–")
@@ -266,7 +258,7 @@ private fun shareCapture(ctx: android.content.Context) {
 
 /** The derailleur measures no distance: the bike's odometer comes from Strava. */
 @Composable
-private fun Kilometres(demo: Boolean, odo: Odo?, when_: DateFormat) {
+internal fun Kilometres(demo: Boolean, odo: Odo?, when_: DateFormat) {
     val ctx = LocalContext.current
     val error by Strava.error.collectAsStateWithLifecycle()
     val bikes by Strava.bikes.collectAsStateWithLifecycle()
@@ -308,6 +300,23 @@ private fun Kilometres(demo: Boolean, odo: Odo?, when_: DateFormat) {
         }
     }
     error?.let { BodyText(it, Modifier.padding(top = 10.dp), color = P.warn, size = 15.sp) }
+}
+
+/** Tyre size for the development, tap to step through. */
+@Composable
+internal fun TyreRow() {
+    val ctx = LocalContext.current
+    var wheel by remember { mutableIntStateOf(Prefs.wheel(ctx)) }
+    SettingRow(
+        tr("Reifen", "Tyre"),
+        tr("für die Entfaltung · tippen zum Wechseln", "for development · tap to change"),
+        onClick = {
+            val i = WHEELS.indexOfFirst { it.second == wheel }
+            wheel = WHEELS[(i + 1) % WHEELS.size].second
+            Prefs.setWheel(ctx, wheel)
+        },
+    ) { BodyText(WHEELS.firstOrNull { it.second == wheel }?.first ?: "$wheel mm", weight = FontWeight.SemiBold) }
+    Divider()
 }
 
 @Composable

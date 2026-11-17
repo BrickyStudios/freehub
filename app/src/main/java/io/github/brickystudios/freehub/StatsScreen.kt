@@ -98,7 +98,7 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, odo: Odo?, onRese
                 Action(tr("Abbrechen", "Cancel"), Modifier.weight(1f), primary = false) { confirm = false }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        TabBarRoom()
     }
 }
 

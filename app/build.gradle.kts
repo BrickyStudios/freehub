@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "io.github.brickystudios.freehub"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.github.brickystudios.freehub"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
         buildConfigField("String", "APK_NAME", "\"Freehub.apk\"")
     }
 
@@ -41,9 +41,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
         buildConfig = true
@@ -65,7 +62,13 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.kyant.backdrop)
+    implementation(libs.kyant.shapes)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit)
     testImplementation("org.json:json:20240303") // Android's org.json is a stub in local unit tests
+}
+
+kotlin {
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) }
 }
