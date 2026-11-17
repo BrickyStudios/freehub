@@ -43,6 +43,7 @@ class RideService : Service() {
             Counter.init(this)
             Power.init(this)
             Strava.init(this)
+            DevLog.on = Prefs.dev(this)
             Di2.start(this)
             scope.launch { Strava.sync(this@RideService) }
             // the derailleur showed up but no ride came of it (someone moved the bike): give up quietly

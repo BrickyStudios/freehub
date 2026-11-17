@@ -40,6 +40,8 @@ With "start when the derailleur wakes up" on (Android 12 or newer), Freehub does
 
 The demo mode plays a made-up ride and twelve earlier rides, so you can try the app without a Di2. Your real numbers stay untouched.
 
+**Developer options** (Bike → Settings) log every Bluetooth packet to and from the derailleur, read every value once, and try to read the gear usage history the derailleur stores itself (experimental, see [PROTOCOL.md](PROTOCOL.md)). The capture is a text file you can share, instead of setting up Android's HCI log. It contains your derailleur's serial number, so send it privately.
+
 ## Which bikes
 
 Freehub talks to the rear derailleur of Shimano's 12-speed wireless Di2 groups:
@@ -71,11 +73,11 @@ Android 8.0 or newer, no Google services needed. Updates come through the app (s
 
 The derailleur advertises a Shimano service (`0x18EF`, "Shimano Bicycle Information") that bike computers subscribe to. Every gear report there carries the shift mode, both positions, the fine-tune levels and pattern numbers for the chainrings and the cassette. Freehub subscribes to it and counts the position changes. Byte layout, the teeth tables and the other services are in [PROTOCOL.md](PROTOCOL.md).
 
-Freehub only reads. It never writes to the settings service or the firmware update service.
+Freehub only reads. In the developer options it logs in to the E-TUBE service (`0x18FF`) to ask for the gear usage history, the same request Shimano's app sends; it never changes a setting and never touches the firmware update service.
 
 ## Planned
 
-- **0.3:** read the gear usage history and error log the derailleur stores itself, so the statistics cover rides from before you installed the app. Needs Shimano's authentication handshake on `0x18FF`.
+- **0.4:** turn the gear usage history from the derailleur's memory into the statistics, once a capture from a real derailleur confirms the reply format. Then the error log.
 - Later: show the shift settings (Synchro map, multi-shift speed, button mapping). Changing them needs Shimano's authentication handshake and more testing on real hardware first.
 
 ## Build
@@ -88,7 +90,7 @@ The unit tests cover the protocol parsing and the shift counting with byte strin
 
 ## Credits
 
-- [BikeBridge](https://codeberg.org/bg443/BikeBridge) worked out the E-TUBE service for Shimano e-bike motors.
+- [BikeBridge](https://codeberg.org/bg443/BikeBridge) (GPL-3.0) worked out the E-TUBE service and its login for Shimano e-bike motors; Freehub uses its handshake and keys.
 - [shimano-di2-media-controls](https://github.com/NitorCreations/shimano-di2-media-controls) decoded the D-Fly buttons.
 - [Saira](https://github.com/Omnibus-Type/Saira) by Omnibus-Type, SIL Open Font License.
 

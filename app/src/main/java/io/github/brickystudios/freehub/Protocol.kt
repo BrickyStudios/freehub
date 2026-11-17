@@ -7,7 +7,7 @@ import java.util.UUID
  * Layout documented in PROTOCOL.md. Pure, so the JVM tests cover it.
  */
 object Sbi {
-    private fun shimano(id: Int): UUID = UUID.fromString("%08x-5348-494d-414e-4f5f424c4500".format(id))
+    fun shimano(id: Int): UUID = UUID.fromString("%08x-5348-494d-414e-4f5f424c4500".format(id))
     private fun sig(id: Int): UUID = UUID.fromString("%08x-0000-1000-8000-00805f9b34fb".format(id))
 
     /** "Shimano Bicycle Information", the service bike computers read. The low bytes spell SHIMANO_BLE. */

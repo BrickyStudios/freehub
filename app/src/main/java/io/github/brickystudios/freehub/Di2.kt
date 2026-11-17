@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
@@ -132,6 +133,8 @@ object Di2 {
                     gatt = null
                     ops.clear()
                     busy = false
+                    DevLog.note("link lost")
+                    endMemory(tr("Verbindung weg nach $memoryPackets Paketen. Mitschnitt teilen hilft.", "Link lost after $memoryPackets packets. Sharing the capture helps."))
                     Counter.linkLost()
                     bike.update { it.copy(link = Link.SEARCHING, buttons = null) }
                     if (wanted) scan()
@@ -140,7 +143,18 @@ object Di2 {
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
-            main.post { if (g == gatt) setUp(g) }
+            main.post {
+                if (g != gatt) return@post
+                if (DevLog.on) table(g)
+                setUp(g)
+            }
+        }
+
+        override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
+            main.post {
+                if (status != BluetoothGatt.GATT_SUCCESS) DevLog.add("!!", c.uuid, note = "write failed, status $status")
+                next()
+            }
         }
 
         override fun onCharacteristicRead(g: BluetoothGatt, c: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
@@ -185,6 +199,7 @@ object Di2 {
         subscribe(Sbi.SERVICE, Sbi.PERIODIC)
         // button presses arrive as indications; some firmware wants a bonded link for those
         subscribe(Sbi.SERVICE, Sbi.INSTANT)
+        if (memoryPending) queueMemory() // bonding started the setup over
         next()
     }
 
@@ -201,6 +216,132 @@ object Di2 {
         else BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
         if (Build.VERSION.SDK_INT >= 33) g.writeDescriptor(d, value) == BluetoothGatt.GATT_SUCCESS
         else @Suppress("DEPRECATION") run { d.value = value; g.writeDescriptor(d) }
+    }
+
+    private fun write(service: java.util.UUID, char: java.util.UUID, value: ByteArray) = ops.addLast { g ->
+        val c = g.getService(service)?.getCharacteristic(char) ?: return@addLast false
+        val type = if (c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0) BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        else BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+        DevLog.add("tx", char, value)
+        if (Build.VERSION.SDK_INT >= 33) g.writeCharacteristic(c, value, type) == BluetoothStatusCodes.SUCCESS
+        else @Suppress("DEPRECATION") run { c.writeType = type; c.value = value; g.writeCharacteristic(c) }
+    }
+
+    /** Starts the queue unless an operation is already running. */
+    private fun kick() { if (!busy) next() }
+
+    /** Developer options: the derailleur's services and characteristics with their properties. */
+    private fun table(g: BluetoothGatt) = g.services.forEach { sv ->
+        DevLog.add("sv", sv.uuid)
+        sv.characteristics.forEach { c ->
+            val p = c.properties
+            val props = listOfNotNull(
+                "read".takeIf { p and BluetoothGattCharacteristic.PROPERTY_READ != 0 },
+                "write".takeIf { p and BluetoothGattCharacteristic.PROPERTY_WRITE != 0 },
+                "write-nr".takeIf { p and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0 },
+                "notify".takeIf { p and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0 },
+                "indicate".takeIf { p and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0 },
+            )
+            DevLog.add("ch", c.uuid, note = "${short(sv.uuid)} " + props.joinToString(","))
+        }
+    }
+
+    private fun short(u: java.util.UUID) = DevLog.short(u)
+
+    /** Developer options: reads every readable value once. Reading changes nothing on the derailleur. */
+    fun readAll() {
+        val g = gatt ?: return
+        DevLog.note("read all")
+        table(g)
+        g.services.flatMap { it.characteristics }.filter { it.properties and BluetoothGattCharacteristic.PROPERTY_READ != 0 }
+            .forEach { c -> read(c.service.uuid, c.uuid) }
+        kick()
+    }
+
+    // ---- the derailleur's own memory (0x18FF), developer options, experimental ----
+    //
+    //   read passkey + nonce → write 01+AES(passkey key, nonce) → 10 01 01
+    //   → write 02+AES(app key, nonce) → 10 02 01 → write FF 00, then the request
+    //   → everything on 2AF9 / 2AFD is logged for [MEMORY_LISTEN_MS] → reconnect for live gears again
+
+    /** a sentence for the screen while reading the memory, null when idle */
+    val memory = MutableStateFlow<String?>(null)
+    private var memoryPending = false
+    private var memoryPasskey: String? = null
+    private var memoryNonce: ByteArray? = null
+    private var memoryPackets = 0
+    private var memoryListening = false
+    private const val MEMORY_STEP_MS = 6_000L
+    private const val MEMORY_LISTEN_MS = 15_000L
+
+    fun readMemory() {
+        if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
+        DevLog.on = true
+        DevLog.note("memory read: login with E-TUBE handshake")
+        memoryPending = true
+        memoryPasskey = null
+        memoryNonce = null
+        memoryPackets = 0
+        memoryListening = false
+        memory.value = tr("Melde mich am Schaltwerk an …", "Logging in to the derailleur …")
+        queueMemory()
+        kick()
+    }
+
+    private fun queueMemory() {
+        subscribe(Etube.SERVICE, Etube.AUTH_CONTROL)
+        subscribe(Etube.SERVICE, Etube.PCE_RESPONSE)
+        subscribe(Etube.SERVICE, Etube.FREE_RESPONSE)
+        read(Etube.SERVICE, Etube.PASSKEY) // readable on some units; six digits or the default
+        read(Etube.SERVICE, Etube.NONCE)
+        main.removeCallbacks(memoryStuck)
+        main.postDelayed(memoryStuck, MEMORY_STEP_MS)
+    }
+
+    private val memoryStuck = Runnable { endMemory(tr("Keine Antwort vom Schaltwerk. Mitschnitt teilen hilft.", "No answer from the derailleur. Sharing the capture helps.")) }
+
+    private val memoryDone = Runnable {
+        endMemory(tr("Fertig: $memoryPackets Pakete empfangen. Jetzt Mitschnitt teilen.", "Done: $memoryPackets packets received. Now share the capture."))
+    }
+
+    /** Ends the memory read and reconnects, because the unit stays in command mode otherwise. */
+    private fun endMemory(text: String) {
+        main.removeCallbacks(memoryStuck)
+        main.removeCallbacks(memoryDone)
+        if (!memoryPending) return
+        memoryPending = false
+        memory.value = text
+        DevLog.note("memory read ended: $memoryPackets packets")
+        gatt?.disconnect()
+    }
+
+    private fun onEtube(uuid: java.util.UUID, v: ByteArray) {
+        if (!memoryPending) return
+        when (uuid) {
+            Etube.PASSKEY -> memoryPasskey = Etube.passkeyOrDefault(v)
+            Etube.NONCE -> {
+                memoryNonce = v
+                write(Etube.SERVICE, Etube.AUTH_CONTROL, Etube.passkeyAnswer(memoryPasskey ?: Etube.DEFAULT_PASSKEY, v))
+            }
+            Etube.AUTH_CONTROL -> when {
+                v.contentEquals(Etube.USER_OK) -> memoryNonce?.let { write(Etube.SERVICE, Etube.AUTH_CONTROL, Etube.appAnswer(it)) }
+                v.contentEquals(Etube.USER_WRONG) -> endMemory(tr("Passkey falsch. Er wurde in E-TUBE geändert.", "Wrong passkey: it was changed in E-TUBE."))
+                v.contentEquals(Etube.APP_OK) -> {
+                    memory.value = tr("Angemeldet, lese Gangnutzung …", "Logged in, reading gear usage …")
+                    write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
+                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.GEAR_USAGE)
+                    memoryListening = true
+                    main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
+                }
+            }
+            Etube.PCE_RESPONSE, Etube.FREE_RESPONSE -> {
+                memoryPackets++
+                memory.value = tr("Empfange … $memoryPackets Pakete", "Receiving … $memoryPackets packets")
+            }
+        }
+        main.removeCallbacks(memoryStuck)
+        if (memoryPending && !memoryListening) main.postDelayed(memoryStuck, MEMORY_STEP_MS)
+        kick()
     }
 
     /** Runs the next queued operation; skips any the derailleur does not offer. */
@@ -236,7 +377,9 @@ object Di2 {
     }
 
     private fun onValue(uuid: java.util.UUID, v: ByteArray) {
+        DevLog.add("rx", uuid, v)
         when (uuid) {
+            Etube.PASSKEY, Etube.NONCE, Etube.AUTH_CONTROL, Etube.PCE_RESPONSE, Etube.FREE_RESPONSE -> onEtube(uuid, v)
             Sbi.PERIODIC -> Sbi.periodic(v)?.withPicked(Prefs.rings(app), Prefs.cogs(app))?.let { gears ->
                 if (bike.value.gears == null) Prefs.setLastGears(app, v)
                 raw = v

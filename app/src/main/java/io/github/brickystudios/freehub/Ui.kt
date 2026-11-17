@@ -226,6 +226,9 @@ object Prefs {
     fun setRings(c: Context, pattern: Int) = p(c).edit().putInt("rings", pattern).apply()
     fun cogs(c: Context) = p(c).getInt("cogs", -1)
     fun setCogs(c: Context, pattern: Int) = p(c).edit().putInt("cogs", pattern).apply()
+    /** developer options: Bluetooth capture, read all, read memory */
+    fun dev(c: Context) = p(c).getBoolean("dev", false)
+    fun setDev(c: Context, on: Boolean) = p(c).edit().putBoolean("dev", on).apply()
     fun updates(c: Context) = p(c).getBoolean("updates", true)
     fun setUpdates(c: Context, on: Boolean) = p(c).edit().putBoolean("updates", on).apply()
 

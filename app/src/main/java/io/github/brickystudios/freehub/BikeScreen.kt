@@ -166,6 +166,14 @@ fun BikeScreen(
         Divider()
         SettingRow(tr("Demo-Modus", "Demo mode"), tr("erfundene Fahrt, echte Zahlen bleiben unberührt", "made-up ride, your real numbers stay untouched"), onClick = { onDemo(!bike.demo) }) { Toggle(bike.demo) }
         Divider()
+        var dev by remember { mutableStateOf(Prefs.dev(ctx)) }
+        SettingRow(
+            tr("Entwickleroptionen", "Developer options"),
+            tr("Mitschnitt der Bluetooth-Pakete und Schaltwerk-Speicher, für Fehlerberichte", "capture of the Bluetooth packets and the derailleur memory, for bug reports"),
+            onClick = { dev = !dev; Prefs.setDev(ctx, dev); DevLog.on = dev },
+        ) { Toggle(dev) }
+        if (dev) Developer(bike)
+        Divider()
         SettingRow(tr("Quellcode und Protokoll", "Source code and protocol"), "github.com/BrickyStudios/freehub", onClick = {
             ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/BrickyStudios/freehub")))
         })
@@ -210,6 +218,51 @@ private fun Drivetrain(bike: Bike, gears: Gears?) {
 }
 
 private fun cassette(t: List<Int>) = "${t.first()}–${t.last()} · ${t.size}-" + tr("fach", "speed")
+
+/** Developer options: share the capture, read every value, try the derailleur's own memory. */
+@Composable
+private fun Developer(bike: Bike) {
+    val ctx = LocalContext.current
+    val lines by DevLog.size.collectAsStateWithLifecycle()
+    val memory by Di2.memory.collectAsStateWithLifecycle()
+    val connected = bike.link == Link.CONNECTED && !bike.demo
+    Panel(Modifier.padding(bottom = 12.dp)) {
+        Column {
+            Label(tr("Mitschnitt", "Capture"))
+            Spacer(Modifier.height(6.dp))
+            BodyText(
+                tr("$lines Zeilen. Enthält die Seriennummer deines Schaltwerks: nur privat verschicken.", "$lines lines. Contains your derailleur's serial number: only send it privately."),
+                color = P.muted, size = 14.sp,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Action(tr("Teilen", "Share"), Modifier.weight(1f)) { shareCapture(ctx) }
+                Action(tr("Leeren", "Clear"), Modifier.weight(1f), primary = false) { DevLog.clear() }
+            }
+            Spacer(Modifier.height(10.dp))
+            Action(tr("Alle Werte lesen", "Read all values"), Modifier.fillMaxWidth(), primary = false) { if (connected) Di2.readAll() }
+            Spacer(Modifier.height(10.dp))
+            Action(tr("Schaltwerk-Speicher lesen", "Read derailleur memory"), Modifier.fillMaxWidth(), primary = connected) { if (connected) Di2.readMemory() }
+            Spacer(Modifier.height(8.dp))
+            BodyText(
+                memory ?: if (connected) tr(
+                    "Experimentell. Meldet sich wie E-TUBE mit dem Passkey an, fragt die Gangnutzung ab und verbindet danach neu. Liest nur, ändert keine Einstellung.",
+                    "Experimental. Logs in like E-TUBE with the passkey, asks for the gear usage and reconnects afterwards. Reads only, changes no setting.",
+                ) else tr("Erst verbinden: einmal schalten.", "Connect first: shift once."),
+                color = if (memory != null) P.ink else P.muted, size = 14.sp,
+            )
+        }
+    }
+}
+
+/** Hands the capture to Android's share sheet as a text file. */
+private fun shareCapture(ctx: android.content.Context) {
+    val f = java.io.File(java.io.File(ctx.cacheDir, "logs").apply { mkdirs() }, "freehub-capture.txt")
+    f.writeText("Freehub ${BuildConfig.VERSION_NAME} · Android ${android.os.Build.VERSION.RELEASE}\n" + DevLog.text() + "\n")
+    val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", f)
+    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    ctx.startActivity(Intent.createChooser(send, tr("Mitschnitt teilen", "Share capture")))
+}
 
 /** The derailleur measures no distance: the bike's odometer comes from Strava. */
 @Composable

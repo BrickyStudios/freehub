@@ -114,21 +114,40 @@ High nibble of byte 0 is the type, low nibble a sequence number that changes wit
 
 Some phones need a bonded link before the indication arrives. Pairing is "just works", no PIN.
 
-## 0x18FF E-TUBE (not used by Freehub yet)
+## 0x18FF E-TUBE
 
-The settings channel of E-TUBE PROJECT. It needs an authentication handshake first (passkey plus an app key, AES over a nonce from `0x2AF4`); [BikeBridge](https://codeberg.org/bg443/BikeBridge) implements it for Shimano e-bike motors, and the derailleur uses the same characteristics.
+The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the developer options, to read the gear usage history the derailleur keeps itself. Status: **not yet confirmed on a real derailleur**; the first capture will tell.
 
 | UUID | Name |
 |---|---|
-| `0x2AF3` | auth control |
-| `0x2AF4` | auth nonce |
-| `0x2AF8` | passkey (default `000000`) |
+| `0x2AF3` | auth control (write, indicate) |
+| `0x2AF4` | auth nonce (read, 16 bytes) |
+| `0x2AF8` | passkey (six ASCII digits, default `000000`) |
 | `0x2AF9` / `0x2AFA` | PCE response / command |
 | `0x2AFB` / `0x2AFC` | boot response / command |
 | `0x2AFD` / `0x2AFE` | free response / command |
-| `0x2AFF` | feature |
+| `0x2AFF` | feature (`FF 00` switches to command mode, live reports pause) |
 
-The derailleur keeps its own gear usage history (time per chainring and cog) which E-TUBE PROJECT reads over the PCE channel with command group `0x33`, command `0x04`. Reading it is planned for Freehub 0.2. Freehub never writes to `0x18FF` or `0x18FE`.
+### Login
+
+The handshake [BikeBridge](https://codeberg.org/bg443/BikeBridge) uses for Shimano e-bike motors:
+
+```
+read 2AF4                     → nonce (16 bytes)
+write 2AF3  01 + AES-ECB(key = 00011147a53fa2795248 + passkey as ASCII, nonce)
+indicate    10 01 01          (10 01 02 = wrong passkey)
+write 2AF3  02 + AES-ECB(key = 0002d39ca426c694e30bc922e87bb58d, nonce)
+indicate    10 02 01          logged in
+write 2AFF  FF 00
+```
+
+### Gear usage history
+
+E-TUBE PROJECT reads it with unit command group `0x33`, command `0x04`. For "everything at once" the parameters are log `0`, sequence `1`, transfer mode `1` (high speed: the unit sends every sequence by itself; `0` = one sequence per request). The reply command is the request command with bit 1 set (`0x06`). A rear derailleur alone reports sequences 1 to 7, with a front derailleur 1 to 13; the last one holds overflow flags, because the time counters are 16 bit and wrap at 65,536.
+
+Freehub sends `00 33 04 00 01 01` to `0x2AFA`. The leading control byte `00` comes from BikeBridge's e-bike commands; E-TUBE's own framing method did not decompile, so this is the part most likely to need a fix. Everything that comes back on `0x2AF9` and `0x2AFD` goes into the capture.
+
+Freehub never writes a setting and never touches the firmware service `0x18FE`.
 
 ## How this was worked out
 

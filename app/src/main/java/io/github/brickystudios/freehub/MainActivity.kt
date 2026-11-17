@@ -75,6 +75,7 @@ class MainActivity : ComponentActivity() {
         Counter.init(this)
         Power.init(this)
         Strava.init(this)
+        DevLog.on = Prefs.dev(this)
         granted = hasPermissions(this)
         if (canAutoStart) autoStart = AutoStart.on(this)
         setContent { FreehubTheme { App() } }
