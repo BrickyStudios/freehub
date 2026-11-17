@@ -261,7 +261,7 @@ object Di2 {
     // ---- the derailleur's own memory (0x18FF), developer options, experimental ----
     //
     //   read passkey + nonce → write 01+AES(passkey key, nonce) → 10 01 01
-    //   → write 02+AES(app key, nonce) → 10 02 01 → write FF 00, then the request
+    //   → write 02+AES(app key, nonce) → 10 02 01 → write FF 00, then request each sequence in turn
     //   → everything on 2AF9 / 2AFD is logged for [MEMORY_LISTEN_MS] → reconnect for live gears again
 
     /** a sentence for the screen while reading the memory, null when idle */
@@ -271,8 +271,11 @@ object Di2 {
     private var memoryNonce: ByteArray? = null
     private var memoryPackets = 0
     private var memoryListening = false
+    private var memorySeq = 0
     private const val MEMORY_STEP_MS = 6_000L
     private const val MEMORY_LISTEN_MS = 15_000L
+    /** sequences to read: a rear derailleur alone has 1–7, with a front derailleur 1–13 */
+    private const val MEMORY_MAX_SEQ = 13
 
     fun readMemory() {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
@@ -326,15 +329,27 @@ object Di2 {
             Etube.AUTH_CONTROL -> when {
                 v.contentEquals(Etube.USER_OK) -> memoryNonce?.let { write(Etube.SERVICE, Etube.AUTH_CONTROL, Etube.appAnswer(it)) }
                 v.contentEquals(Etube.USER_WRONG) -> endMemory(tr("Passkey falsch. Er wurde in E-TUBE geändert.", "Wrong passkey: it was changed in E-TUBE."))
-                v.contentEquals(Etube.APP_OK) -> {
+                // the unit indicates APP_OK more than once; start the burst only on the first
+                v.contentEquals(Etube.APP_OK) && !memoryListening -> {
+                    memoryListening = true
                     memory.value = tr("Angemeldet, lese Gangnutzung …", "Logged in, reading gear usage …")
                     write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
-                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.GEAR_USAGE)
-                    memoryListening = true
+                    memorySeq = 1
+                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.gearUsage(memorySeq))
                     main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
                 }
             }
-            Etube.PCE_RESPONSE, Etube.FREE_RESPONSE -> {
+            Etube.PCE_RESPONSE -> {
+                memoryPackets++
+                memory.value = tr("Empfange … $memoryPackets Pakete", "Receiving … $memoryPackets packets")
+                // the reply echoes its sequence (`33 <seq> …`); request the next until the last one
+                if (v.getOrNull(0)?.toInt()?.and(0xFF) == Etube.GEAR_USAGE_GROUP &&
+                    v.getOrNull(1)?.toInt()?.and(0xFF) == memorySeq && memorySeq < MEMORY_MAX_SEQ) {
+                    memorySeq++
+                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.gearUsage(memorySeq))
+                }
+            }
+            Etube.FREE_RESPONSE -> {
                 memoryPackets++
                 memory.value = tr("Empfange … $memoryPackets Pakete", "Receiving … $memoryPackets packets")
             }

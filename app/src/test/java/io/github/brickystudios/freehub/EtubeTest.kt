@@ -21,8 +21,10 @@ class EtubeTest {
     }
 
     @Test fun gearUsageRequestIsWhatEtubeSends() {
-        // control byte, group 0x33, command 0x04, log 0, sequence 1, high-speed transfer
-        assertEquals("00 33 04 00 01 01", Etube.GEAR_USAGE.hex())
+        // control byte, group 0x33, command 0x04, log 0, sequence, high-speed transfer; only the sequence byte moves
+        assertEquals("00 33 04 00 01 01", Etube.gearUsage(1).hex())
+        assertEquals("00 33 04 00 07 01", Etube.gearUsage(7).hex())
+        assertEquals(0x33, Etube.GEAR_USAGE_GROUP)
         assertEquals("2AC1", DevLog.short(Sbi.PERIODIC))
         assertEquals("2A19", DevLog.short(Sbi.BATTERY_LEVEL))
     }

@@ -116,7 +116,7 @@ Some phones need a bonded link before the indication arrives. Pairing is "just w
 
 ## 0x18FF E-TUBE
 
-The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the developer options, to read the gear usage history the derailleur keeps itself. Status: **not yet confirmed on a real derailleur**; the first capture will tell.
+The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the developer options, to read the gear usage history the derailleur keeps itself. Status: **login and the gear-usage request are confirmed on a real RD-R7150** (firmware 4.1.0.0); the reply payload is not decoded yet.
 
 | UUID | Name |
 |---|---|
@@ -141,11 +141,19 @@ indicate    10 02 01          logged in
 write 2AFF  FF 00
 ```
 
+Confirmed live: the RD answers `10 01 01` to the passkey frame and `10 02 01` to the app frame, so the two BikeBridge AES keys and the default passkey `000000` are correct for the derailleur, not only for e-bike motors. The RD indicates `10 02 01` more than once; act on the first.
+
 ### Gear usage history
 
-E-TUBE PROJECT reads it with unit command group `0x33`, command `0x04`. For "everything at once" the parameters are log `0`, sequence `1`, transfer mode `1` (high speed: the unit sends every sequence by itself; `0` = one sequence per request). The reply command is the request command with bit 1 set (`0x06`). A rear derailleur alone reports sequences 1 to 7, with a front derailleur 1 to 13; the last one holds overflow flags, because the time counters are 16 bit and wrap at 65,536.
+E-TUBE PROJECT reads it with unit command group `0x33`, command `0x04`. The parameters are log `0`, a sequence number, and transfer mode `1`. A rear derailleur alone reports sequences 1 to 7, with a front derailleur 1 to 13; the last one holds overflow flags, because the time counters are 16 bit and wrap at 65,536.
 
-Freehub sends `00 33 04 00 01 01` to `0x2AFA`. The leading control byte `00` comes from BikeBridge's e-bike commands; E-TUBE's own framing method did not decompile, so this is the part most likely to need a fix. Everything that comes back on `0x2AF9` and `0x2AFD` goes into the capture.
+Freehub sends `00 33 04 00 <seq> 01` to `0x2AFA`. The RD answers each one on `0x2AF9` as:
+
+```
+33 <seq> <eight data bytes>     e.g. sequence 1 → 33 01 ·· ·· ·· ·· ·· ·· ·· ··
+```
+
+Byte 0 echoes the group `0x33`, byte 1 the sequence. **The leading control byte `00` is correct** — sequence 1 came back on an RD-R7150, which settles the one part that had not decompiled. In practice the unit returns one sequence per request even in transfer mode 1, so Freehub asks for them one at a time, sending `<seq>+1` after each reply until it has the last one. The eight data bytes are not decoded yet: that needs a capture holding all of sequences 1 to 7 from a bike that has been ridden, to tell structured counters from anything scrambled.
 
 Freehub never writes a setting and never touches the firmware service `0x18FE`.
 

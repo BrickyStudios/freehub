@@ -37,13 +37,17 @@ object Etube {
     /** after login: E-TUBE (and BikeBridge) switch the unit to command mode; live gear reports pause until reconnect */
     val COMMAND_MODE = hex("ff00")
 
+    /** group byte that leads a gear-usage reply on 0x2AF9; a repeat of the same sequence echoes it back */
+    const val GEAR_USAGE_GROUP = 0x33
+
     /**
-     * "All usage history" as E-TUBE PROJECT asks for it: control byte, group 0x33, command 0x04,
-     * then log 0, sequence 1, transfer mode 1 (high speed: the unit streams every sequence on its own).
-     * shortcut: the control byte 0x00 is taken from BikeBridge's e-bike commands; E-TUBE's own framing
-     * method did not decompile. Check against the first capture from a real derailleur.
+     * One sequence of the gear-usage history, as E-TUBE PROJECT asks for it: control byte 0x00, group 0x33,
+     * command 0x04, log 0, this sequence, transfer mode 1. The derailleur answers each on 0x2AF9 as
+     * `33 <sequence> …`; a rear derailleur alone has sequences 1–7, with a front derailleur 1–13.
+     * Confirmed against an RD-R7150: sequence 1 returns, so the leading 0x00 control byte is right.
+     * In practice one sequence comes back per request, so Freehub asks for them one at a time.
      */
-    val GEAR_USAGE = hex("003304000101")
+    fun gearUsage(seq: Int) = hex("00330400") + byteArrayOf(seq.toByte(), 1)
 
     /** Passkeys are six digits; anything else read from the unit is not one. */
     fun passkeyOrDefault(raw: ByteArray?): String =
