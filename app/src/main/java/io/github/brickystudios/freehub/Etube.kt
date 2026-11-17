@@ -40,17 +40,13 @@ object Etube {
     /** group `0x33` echoed in byte 1 of a real gear-usage reply (`33 33 …`); `33 01 …` is only a status packet */
     const val GEAR_USAGE_REPLY_GROUP = 0x33
 
-    /** sequences a 2×12 reports: front-low 1–6, front-top 7–12, overflow 13; a rear derailleur alone uses 1–7 */
-    const val GEAR_USAGE_MAX_SEQ = 13
-
     /**
      * The gear-usage read, in the framing a real RD-R7150 accepted — BikeBridge's unit-command opcode `0x13`:
-     * slot `0x00`, write opcode `0x13`, group `0x33`, command `0x04`, log 0, this sequence, transfer mode 1.
-     * The derailleur replies on `0x2AF9` as `33 33 …` (group `0x33` echoed). At the bike the raw command only
-     * drew a status packet (`33 01 …`) and the DCAS `0x48` frame drew no reply, so those are dropped. One reply
-     * comes per request, so Freehub walks the sequences 1…[GEAR_USAGE_MAX_SEQ].
+     * slot `0x00`, write opcode `0x13`, group `0x33`, command `0x04`, log 0, start sequence 1, transfer mode 1
+     * (high speed). E-TUBE sends this **once** and then collects the sequences the derailleur streams on its own,
+     * ending after 3 s of silence. The command is sent once; Freehub must not re-send, or the stream restarts at 1.
      */
-    fun gearUsage(seq: Int) = hex("00133304") + byteArrayOf(0, seq.toByte(), 1)
+    val GEAR_USAGE = hex("00133304000101")
 
     /** Passkeys are six digits; anything else read from the unit is not one. */
     fun passkeyOrDefault(raw: ByteArray?): String =

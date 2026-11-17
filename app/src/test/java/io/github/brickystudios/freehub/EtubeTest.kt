@@ -21,9 +21,8 @@ class EtubeTest {
     }
 
     @Test fun gearUsageRequestIsTheFramingTheDerailleurAccepted() {
-        // slot 0x00, write opcode 0x13, group 0x33, cmd 0x04, log 0, sequence, high speed; only the sequence byte moves
-        assertEquals("00 13 33 04 00 01 01", Etube.gearUsage(1).hex())
-        assertEquals("00 13 33 04 00 07 01", Etube.gearUsage(7).hex())
+        // slot 0x00, write opcode 0x13, group 0x33, cmd 0x04, log 0, sequence 1, high speed; sent once, then the unit streams
+        assertEquals("00 13 33 04 00 01 01", Etube.GEAR_USAGE.hex())
         assertEquals(0x33, Etube.GEAR_USAGE_REPLY_GROUP)
     }
 

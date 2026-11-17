@@ -320,8 +320,6 @@ object Di2 {
     private var memoryListening = false
     private const val MEMORY_STEP_MS = 6_000L
     private const val MEMORY_LISTEN_MS = 17_000L
-    /** gap between the per-sequence gear-usage requests, so each reply lands under its own label */
-    private const val MEMORY_SEQ_STEP_MS = 1_000L
 
     fun readMemory() {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
@@ -353,14 +351,6 @@ object Di2 {
         endMemory(tr("Fertig: $memoryPackets Pakete empfangen. Jetzt Mitschnitt teilen.", "Done: $memoryPackets packets received. Now share the capture."))
     }
 
-    /** Asks for gear-usage sequence [seq], then schedules the next; one reply comes per request. */
-    private fun sendGearSeq(seq: Int) {
-        if (!memoryPending || seq > Etube.GEAR_USAGE_MAX_SEQ) return
-        DevLog.note("gear-usage seq $seq")
-        write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.gearUsage(seq))
-        kick()
-        main.postDelayed({ sendGearSeq(seq + 1) }, MEMORY_SEQ_STEP_MS)
-    }
 
     /** Ends the memory read and reconnects, because the unit stays in command mode otherwise. */
     private fun endMemory(text: String) {
@@ -389,7 +379,9 @@ object Di2 {
                     memoryListening = true
                     memory.value = tr("Angemeldet, lese Gangnutzung …", "Logged in, reading gear usage …")
                     write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
-                    sendGearSeq(1)
+                    // send once; high speed streams every sequence on its own, re-sending would restart it at 1
+                    DevLog.note("gear-usage request (high speed, then listen)")
+                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.GEAR_USAGE)
                     main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
                 }
             }
