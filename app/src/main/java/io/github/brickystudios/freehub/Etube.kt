@@ -67,6 +67,13 @@ object Etube {
         Triple("af5 off", AF5, byteArrayOf(0x00)),
         Triple("read firmware", PCE_COMMAND, unitCommand(0x01, 0x2C, 0)),
         Triple("setProtocolMode", PCE_COMMAND, ble(0x03, 0x00)), // 00 03 00 → config streams on 2AFD
+        // the basic config auto-streams on 2AFD, but the synchronised-shift detail (group 0x32 PCA) does not —
+        // E-TUBE reads it separately. With the session now open these should answer with data (33 32 ae …) on
+        // 2AF9 instead of the NAK (33 32 af …) they gave before.
+        Triple("synchro", PCE_COMMAND, unitCommand(0x32, 0xAC, 0x10, 1, 0, 0)),
+        Triple("sub-synchro", PCE_COMMAND, unitCommand(0x32, 0xEC, 0x10, 1, 0, 0)),
+        Triple("connecting-system", PCE_COMMAND, unitCommand(0x33, 0x4C, 0)),
+        Triple("error-log", PCE_COMMAND, unitCommand(0x32, 0xCC, 0)),
     )
 
     /**
