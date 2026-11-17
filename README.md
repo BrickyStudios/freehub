@@ -23,8 +23,9 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 
 ## What it shows
 
-- **The gear you are in**, as teeth (50 × 17) and as positions (front 2/2, rear 7/12). The app reads chainrings and cassette from the derailleur, so there is nothing to set up.
-- **Battery** of the Di2 system in percent.
+- **The gear you are in**, as teeth (50 × 17) and as positions (front 2/2, rear 7/12). The app reads chainrings and cassette from the derailleur. If it reports a pattern the app does not know, or the wrong one, pick yours under Bike → Drivetrain.
+- **Battery** of the Di2 system in percent, with the **range left in km** and when you last charged. The range starts from Shimano's figure (about 1,000 km per charge) and learns your real consumption once Strava is connected.
+- **Total kilometres of the bike**, optional, from Strava. The derailleur measures no distance, so Freehub reads the odometer Strava keeps per bike. It counts every ride you uploaded, also the ones Freehub never saw. You need your own Strava API app (Client ID and Secret from [strava.com/settings/api](https://www.strava.com/settings/api), callback domain `localhost`), because an open-source app cannot ship a secret.
 - **Every shift, counted.** A multi-shift across three cogs counts as three. Per ride and all time, rear and front apart, plus shifts per hour.
 - **Where your time goes**: a heatmap of chainring × cog. Cross-chained combinations have an orange outline, and the share of time you spent in them is on top.
 - **Ratio and development** (metres per crank turn) for your tyre size.
@@ -34,6 +35,8 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 - **English or German**, whatever language your phone runs.
 
 With "keep counting with the screen off" on, a notification holds the connection while the phone sits in your jersey pocket. The ride ends ten minutes after the derailleur goes to sleep.
+
+With "start when the derailleur wakes up" on (Android 12 or newer), Freehub does not need to be open at all: Android watches for the derailleur and starts the counting as soon as you click a shifter. You pick your derailleur once in Android's own list.
 
 The demo mode plays a made-up ride and twelve earlier rides, so you can try the app without a Di2. Your real numbers stay untouched.
 
@@ -60,9 +63,9 @@ Android 8.0 or newer, no Google services needed. Updates come through the app (s
 
 ## Privacy
 
-- The only connections are Bluetooth to your derailleur and, if update checks are on, one request to GitHub's release API at start.
+- The only connections are Bluetooth to your derailleur, one request to GitHub's release API at start if update checks are on, and Strava's API if you connect it (your bike list and odometer, nothing is uploaded).
 - Rides and counters live in the app's private storage. Android backup and device transfer are switched off for them.
-- No account, no analytics, no ads.
+- No Freehub account, no SHIMANO ID, no analytics, no ads. Strava is optional.
 
 ## How it works
 
@@ -72,7 +75,7 @@ Freehub only reads. It never writes to the settings service or the firmware upda
 
 ## Planned
 
-- **0.2:** read the gear usage history the derailleur stores itself, so the statistics cover rides from before you installed the app.
+- **0.3:** read the gear usage history and error log the derailleur stores itself, so the statistics cover rides from before you installed the app. Needs Shimano's authentication handshake on `0x18FF`.
 - Later: show the shift settings (Synchro map, multi-shift speed, button mapping). Changing them needs Shimano's authentication handshake and more testing on real hardware first.
 
 ## Build

@@ -52,6 +52,8 @@ object Di2 {
     private val ops = ArrayDeque<(BluetoothGatt) -> Boolean>()
     private var busy = false
     private var bondReceiver: BroadcastReceiver? = null
+    /** the last gear report as it came, for [repick] */
+    private var raw: ByteArray? = null
 
     private val adapter get() = app.getSystemService(BluetoothManager::class.java)?.adapter
 
@@ -235,16 +237,27 @@ object Di2 {
 
     private fun onValue(uuid: java.util.UUID, v: ByteArray) {
         when (uuid) {
-            Sbi.PERIODIC -> Sbi.periodic(v)?.let { gears ->
+            Sbi.PERIODIC -> Sbi.periodic(v)?.withPicked(Prefs.rings(app), Prefs.cogs(app))?.let { gears ->
                 if (bike.value.gears == null) Prefs.setLastGears(app, v)
+                raw = v
                 bike.update { it.copy(gears = gears) }
                 Counter.onGears(gears)
             }
             Sbi.INSTANT -> (Sbi.instant(v) as? Instant.Buttons)?.let { b -> bike.update { it.copy(buttons = b) } }
-            Sbi.BATTERY_LEVEL -> v.firstOrNull()?.let { b -> bike.update { it.copy(battery = b.toInt() and 0xFF) } }
+            Sbi.BATTERY_LEVEL -> v.firstOrNull()?.let { b ->
+                val level = b.toInt() and 0xFF
+                bike.update { it.copy(battery = level) }
+                Power.record(level, Strava.odo.value?.km)
+            }
             Sbi.FIRMWARE -> bike.update { it.copy(firmware = v.decodeToString().trim()) }
             Sbi.SERIAL -> bike.update { it.copy(serial = v.decodeToString().trim()) }
         }
+    }
+
+    /** Crank or cassette picked by hand: read the last report again with the new teeth. */
+    fun repick() {
+        val g = Sbi.periodic(raw ?: return)?.withPicked(Prefs.rings(app), Prefs.cogs(app)) ?: return
+        bike.update { it.copy(gears = g) }
     }
 
     /** Demo mode feeds the same path as a real derailleur. */

@@ -32,7 +32,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, onReset: () -> Unit) {
+fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, odo: Odo?, onReset: () -> Unit) {
     // the ride in progress counts too, so the numbers move while you ride
     val usage = (totals.usage.keys + (ride?.usage?.keys ?: emptySet())).associateWith { (totals.usage[it] ?: 0) + (ride?.usage?.get(it) ?: 0) }
     val shifts = totals.shifts + (ride?.let { it.rear + it.front } ?: 0)
@@ -47,6 +47,11 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, onReset: () -> Un
             tr("Schaltvorgänge in ${totals.rides.size + (if (ride != null) 1 else 0)} Fahrten · ${duration(ms)}", "shifts in ${totals.rides.size + (if (ride != null) 1 else 0)} rides · ${duration(ms)}"),
             color = P.muted,
         )
+        // Strava's odometer counts every uploaded ride, also those Freehub never saw
+        if (odo != null) {
+            Spacer(Modifier.height(20.dp))
+            Field(count(Math.round(odo.km)) + " km", tr("Gesamt auf dem Rad · ${odo.bike} (Strava)", "Bike total · ${odo.bike} (Strava)"), size = 44.sp)
+        }
         Spacer(Modifier.height(24.dp))
         if (ms == 0L) {
             Panel { BodyText(tr("Noch keine Fahrt. Sobald das Schaltwerk verbunden ist, zählt Freehub jeden Gangwechsel.", "No ride yet. Once the derailleur is connected, Freehub counts every shift."), color = P.muted) }

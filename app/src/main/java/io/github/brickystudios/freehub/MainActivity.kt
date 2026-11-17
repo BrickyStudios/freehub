@@ -10,6 +10,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
@@ -62,14 +63,22 @@ class MainActivity : ComponentActivity() {
         if (granted) Di2.start(this)
     }
     private val askBluetooth = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { Di2.start(this) }
+    private var autoStart by mutableStateOf(false)
+    private val pickDerailleur = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        if (canAutoStart && r.resultCode == RESULT_OK) autoStart = AutoStart.picked(this, r.data)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         Lang.init(this)
         Counter.init(this)
+        Power.init(this)
+        Strava.init(this)
         granted = hasPermissions(this)
+        if (canAutoStart) autoStart = AutoStart.on(this)
         setContent { FreehubTheme { App() } }
+        fromStrava(intent)
         if (Prefs.updates(this) && !BuildConfig.DEBUG) lifecycleScope.launch { Updater.check(this@MainActivity, manual = false) }
     }
 
@@ -77,6 +86,32 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         granted = hasPermissions(this)
         if (granted && !Di2.bike.value.demo) Di2.start(this)
+        lifecycleScope.launch { Strava.sync(this@MainActivity) }
+    }
+
+    override fun onStart() { super.onStart(); visible = true }
+    override fun onStop() { visible = false; super.onStop() }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        fromStrava(intent)
+    }
+
+    /** Strava sends the rider back as freehub://localhost?code=… */
+    private fun fromStrava(i: Intent?) {
+        val uri = i?.data?.takeIf { it.scheme == "freehub" } ?: return
+        setIntent(Intent(this, MainActivity::class.java)) // a rotation must not replay the code
+        lifecycleScope.launch { Strava.finishLogin(this@MainActivity, uri) }
+    }
+
+    private fun switchAutoStart(on: Boolean) {
+        if (!canAutoStart) return
+        if (!on) { AutoStart.off(this); autoStart = false; return }
+        AutoStart.pick(
+            this,
+            onPicker = { pickDerailleur.launch(IntentSenderRequest.Builder(it).build()) },
+            onFail = { autoStart = false },
+        )
     }
 
     @Composable
@@ -88,14 +123,17 @@ class MainActivity : ComponentActivity() {
         val totals by Counter.totals.collectAsStateWithLifecycle()
         val update by Updater.state.collectAsStateWithLifecycle()
         val note by Updater.note.collectAsStateWithLifecycle()
+        val odo by Strava.odo.collectAsStateWithLifecycle()
+        val power by Power.log.collectAsStateWithLifecycle()
         var tab by rememberSaveable { mutableIntStateOf(0) }
         // so the statistics can name the teeth when the bike is not connected
-        val known = bike.gears ?: remember(bike.link) { Prefs.lastGears(ctx) }
+        val known = bike.gears ?: remember(bike.link, tab) { Prefs.lastGears(ctx) }
 
         LaunchedEffect(bike.link, bike.demo) {
             if (bike.link == Link.CONNECTED && !bike.demo && Prefs.background(ctx)) {
                 ContextCompat.startForegroundService(ctx, Intent(ctx, RideService::class.java))
             }
+            if (bike.link == Link.CONNECTED && !bike.demo) Strava.sync(ctx)
         }
 
         Column(Modifier.fillMaxSize().background(P.bg).statusBarsPadding()) {
@@ -106,14 +144,16 @@ class MainActivity : ComponentActivity() {
             Crossfade(tab, Modifier.weight(1f), animationSpec = tween(120), label = "tab") { tab ->
                 when (tab) {
                     0 -> LiveScreen(
-                        bike, ride, Prefs.wheel(ctx), needsPermission = !granted && !bike.demo,
+                        bike, ride, Prefs.wheel(ctx), odo, power, needsPermission = !granted && !bike.demo,
                         onAllow = { askPermissions.launch(permissions()) },
                         onBluetooth = { askBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
                         onDemo = { Demo.start(lifecycleScope) },
                     )
-                    1 -> StatsScreen(totals, ride, known, onReset = Counter::reset)
+                    1 -> StatsScreen(totals, ride, known, odo, onReset = Counter::reset)
                     else -> BikeScreen(
-                        bike, known,
+                        bike, known, odo, power,
+                        autoStart = autoStart.takeIf { canAutoStart && granted },
+                        onAutoStart = ::switchAutoStart,
                         onDemo = { on -> if (on) Demo.start(lifecycleScope) else { Demo.stop(); if (granted) Di2.start(ctx) } },
                         onCheckUpdate = { scope.launch { Updater.check(ctx, manual = true) } },
                         updateNote = note,
@@ -125,6 +165,10 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        /** the ride service leaves the link alone while the app is on screen */
+        var visible = false
+            private set
+
         fun permissions(): Array<String> = buildList {
             if (Build.VERSION.SDK_INT >= 31) addAll(listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT))
             else add(Manifest.permission.ACCESS_FINE_LOCATION)

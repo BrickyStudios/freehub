@@ -5,14 +5,18 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.util.Log
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -34,6 +38,19 @@ class RideService : Service() {
             return START_NOT_STICKY
         }
         Lang.init(this)
+        if (intent?.action == AUTO) {
+            // woken by Android with Freehub closed: set up what the app would, then look for the derailleur
+            Counter.init(this)
+            Power.init(this)
+            Strava.init(this)
+            Di2.start(this)
+            scope.launch { Strava.sync(this@RideService) }
+            // the derailleur showed up but no ride came of it (someone moved the bike): give up quietly
+            scope.launch {
+                delay(Counter.END_AFTER_MS)
+                if (Counter.now.value == null) { if (!MainActivity.visible) Di2.stop(); stopSelf() }
+            }
+        }
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Fahrt", "Ride"), NotificationManager.IMPORTANCE_LOW))
         val first = note(texts(Di2.bike.value, Counter.now.value))
@@ -45,8 +62,8 @@ class RideService : Service() {
             combine(Di2.bike, Counter.now) { b, r -> b to r }
                 .collect { (b, r) ->
                     if (r != null) rode = true
-                    if (rode && r == null) { // the ride ended: stop looking for the derailleur
-                        Di2.stop()
+                    if (rode && r == null) { // the ride ended: stop looking for the derailleur, unless someone is watching
+                        if (!MainActivity.visible) Di2.stop()
                         stopSelf()
                         return@collect
                     }
@@ -91,5 +108,13 @@ class RideService : Service() {
         private const val CHANNEL = "ride"
         private const val ID = 1
         private const val STOP = "stop"
+        private const val AUTO = "auto"
+
+        /** The derailleur woke up while Freehub was closed. */
+        fun wake(c: Context) {
+            if (!MainActivity.hasPermissions(c) || Di2.bike.value.demo) return
+            runCatching { ContextCompat.startForegroundService(c, Intent(c, RideService::class.java).setAction(AUTO)) }
+                .onFailure { Log.w("Freehub", "auto start refused", it) }
+        }
     }
 }

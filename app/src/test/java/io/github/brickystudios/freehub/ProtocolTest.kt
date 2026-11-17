@@ -1,6 +1,7 @@
 package io.github.brickystudios.freehub
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -60,5 +61,18 @@ class ProtocolTest {
     @Test fun readsAlerts() {
         assertEquals(Instant.Alert(3), Sbi.instant(bytes(0x15, 3)))
         assertNull(Sbi.instant(bytes(0x35, 3)))
+    }
+
+    @Test fun pickedTeethWinAndFillUnknownPatterns() {
+        // a derailleur that reports pattern numbers we do not know: no teeth
+        val unknown = Sbi.periodic(bytes(0, 0, 255, 2, 2, 7, 12, 0, 0, 0, 0, 0xf8, 8, 0x63, 0, 0x63, 0))!!
+        assertEquals(null, unknown.frontTeeth)
+        val picked = unknown.withPicked(6, 20) // 50/34, 11-36
+        assertEquals(50, picked.frontTeeth)
+        assertEquals(17, picked.rearTeeth) // 11-12-13-14-15-[17]-19…: 7th of 12 from the hard end
+        // nothing picked: the report stays as it was
+        assertEquals(unknown, unknown.withPicked(-1, -1))
+        assertTrue(20 in Teeth.cogPatterns(12) && 18 in Teeth.cogPatterns(12) && 2 !in Teeth.cogPatterns(12))
+        assertTrue(6 in Teeth.ringPatterns(2) && 3 !in Teeth.ringPatterns(2))
     }
 }

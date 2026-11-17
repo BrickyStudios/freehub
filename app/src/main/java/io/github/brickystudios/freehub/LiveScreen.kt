@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,7 +47,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, needsPermission: Boolean, onAllow: () -> Unit, onBluetooth: () -> Unit, onDemo: () -> Unit) {
+fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, odo: Odo?, power: List<Charge>, needsPermission: Boolean, onAllow: () -> Unit, onBluetooth: () -> Unit, onDemo: () -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)) {
         StatusLine(bike)
         Spacer(Modifier.height(20.dp))
@@ -58,7 +57,7 @@ fun LiveScreen(bike: Bike, ride: RideNow?, wheelMm: Int, needsPermission: Boolea
             bike.link == Link.NO_BLUETOOTH -> Hint(tr("Bluetooth ist aus", "Bluetooth is off"), tr("Freehub spricht per Bluetooth mit dem Schaltwerk.", "Freehub talks to the derailleur over Bluetooth."), tr("Einschalten", "Turn on"), onBluetooth, onDemo)
             g == null && bike.link != Link.CONNECTED -> Searching(onDemo)
             g == null -> Hint(tr("Verbunden", "Connected"), tr("Schalt einmal, dann schickt das Schaltwerk den Gang.", "Shift once and the derailleur sends the gear."), null, {}, null)
-            else -> Cockpit(g, ride, wheelMm, bike.buttons)
+            else -> Cockpit(g, ride, wheelMm, bike.buttons, bike.battery, bike.battery?.let { Range.remainingKm(it, power) }, odo)
         }
     }
 }
@@ -76,25 +75,11 @@ private fun StatusLine(bike: Bike) {
         Dot(color)
         Spacer(Modifier.width(10.dp))
         Label(text, Modifier.weight(1f), color = P.ink)
-        bike.battery?.let { Battery(it) }
     }
 }
 
 @Composable
-fun Battery(percent: Int) {
-    val low = percent <= 20
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics { contentDescription = "Akku $percent %" }) {
-        Box(Modifier.size(width = 26.dp, height = 13.dp).background(P.track, RoundedCornerShape(2.dp)).padding(2.dp)) {
-            Box(Modifier.fillMaxWidth(percent / 100f).height(9.dp).background(if (low) P.warn else P.ink, RoundedCornerShape(1.dp)))
-        }
-        Box(Modifier.size(width = 2.dp, height = 5.dp).background(P.track)) // the terminal nub
-        Spacer(Modifier.width(8.dp))
-        Num("$percent %", 18.sp, weight = FontWeight.Bold, color = if (low) P.warn else P.ink)
-    }
-}
-
-@Composable
-private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.Buttons?) {
+private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.Buttons?, battery: Int?, rangeKm: Double?, odo: Odo?) {
     val front = g.frontTeeth
     val rear = g.rearTeeth
     val still = reducedMotion()
@@ -126,6 +111,15 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
         Field(ratio?.let { "%.2f".fmt(it) } ?: "–", tr("Übersetzung", "Ratio"), Modifier.weight(1f))
         Field(ratio?.let { "%.2f m".fmt(it * wheelMm / 1000f) } ?: "–", tr("Entfaltung", "Development"), Modifier.weight(1f))
         Field(modeShort(g.mode), tr("Schaltmodus", "Shift mode"), Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(16.dp))
+    // labelled on purpose: a bare "100 %" in the corner reads as the phone's own battery
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val low = (battery ?: 100) <= 20
+        Field(battery?.let { "$it %" } ?: "–", tr("Akku Di2", "Di2 battery"), Modifier.weight(1f), color = if (low) P.warn else P.ink)
+        Field(rangeKm?.let(::approxKm) ?: "–", tr("Reicht noch", "Range left"), Modifier.weight(1f))
+        if (odo != null) Field(count(Math.round(odo.km)) + " km", tr("Rad gesamt", "Bike total"), Modifier.weight(1f))
+        else Spacer(Modifier.weight(1f))
     }
     Spacer(Modifier.height(20.dp))
     Panel {

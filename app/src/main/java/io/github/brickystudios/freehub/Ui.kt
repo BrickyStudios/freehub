@@ -36,6 +36,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import java.util.Locale
 
 /** The app's language: null follows the phone (German phones get German, all others English). */
@@ -172,6 +180,26 @@ fun SettingRow(title: String, note: String? = null, onClick: (() -> Unit)? = nul
     }
 }
 
+/** A one-line text field in the app's style: label above, a framed slab like a [Panel]. */
+@Composable
+fun Input(value: String, onChange: (String) -> Unit, label: String, secret: Boolean = false, digits: Boolean = false) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Label(label)
+        Spacer(Modifier.height(6.dp))
+        BasicTextField(
+            value, onChange,
+            singleLine = true,
+            textStyle = TextStyle(fontFamily = Body, fontSize = 17.sp, color = P.ink),
+            cursorBrush = SolidColor(P.accent),
+            visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
+            keyboardOptions = KeyboardOptions(keyboardType = if (secret) KeyboardType.Password else if (digits) KeyboardType.Number else KeyboardType.Text),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                .background(P.surface, RoundedCornerShape(6.dp)).border(1.dp, P.line, RoundedCornerShape(6.dp))
+                .padding(horizontal = 14.dp, vertical = 15.dp),
+        )
+    }
+}
+
 /** On/off switch drawn in the app's own style. */
 @Composable
 fun Toggle(on: Boolean) {
@@ -193,13 +221,22 @@ object Prefs {
     fun setHaptics(c: Context, on: Boolean) = p(c).edit().putBoolean("haptics", on).apply()
     fun lang(c: Context) = p(c).getString("lang", null)
     fun setLang(c: Context, lang: String?) = p(c).edit().putString("lang", lang).apply()
+    /** crank and cassette pattern numbers picked by hand; -1 = take what the derailleur reports */
+    fun rings(c: Context) = p(c).getInt("rings", -1)
+    fun setRings(c: Context, pattern: Int) = p(c).edit().putInt("rings", pattern).apply()
+    fun cogs(c: Context) = p(c).getInt("cogs", -1)
+    fun setCogs(c: Context, pattern: Int) = p(c).edit().putInt("cogs", pattern).apply()
     fun updates(c: Context) = p(c).getBoolean("updates", true)
     fun setUpdates(c: Context, on: Boolean) = p(c).edit().putBoolean("updates", on).apply()
 
     /** the first gear report of the last connection, raw, so offline screens know rings and cogs */
-    fun lastGears(c: Context): Gears? = p(c).getString("gears", null)?.let { hex ->
+    fun lastGears(c: Context): Gears? = reportedGears(c)?.withPicked(rings(c), cogs(c))
+    /** as the derailleur sent it, without the teeth picked by hand */
+    fun reportedGears(c: Context): Gears? = rawGears(c)?.let { hex ->
         Sbi.periodic(hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
     }
+    /** the same report as hex, shown under Bike so a rider can send it when the teeth come out wrong */
+    fun rawGears(c: Context): String? = p(c).getString("gears", null)
     fun setLastGears(c: Context, raw: ByteArray) = p(c).edit().putString("gears", raw.joinToString("") { "%02x".format(it) }).apply()
 }
 
@@ -212,6 +249,9 @@ fun duration(ms: Long): String {
         else -> "${count(min / 60)} h"
     }
 }
+
+/** "≈ 820 km": an estimate, rounded to ten so it does not pretend to be exact */
+fun approxKm(km: Double) = "≈ " + count((Math.round(km / 10) * 10)) + " km"
 
 /** 1234 → "1.234" in German, "1,234" in English */
 fun count(n: Long): String = "%,d".fmt(n)

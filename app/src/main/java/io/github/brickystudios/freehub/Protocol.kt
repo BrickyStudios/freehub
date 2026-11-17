@@ -105,6 +105,15 @@ data class Gears(
 ) {
     val frontTeeth: Int? get() = Teeth.at(chainrings, front, frontMax)
     val rearTeeth: Int? get() = Teeth.at(sprockets, rear, rearMax)
+
+    /**
+     * Crank and cassette picked by hand win over what the derailleur reports: it only knows what
+     * E-TUBE was once told, and an unknown pattern number leaves the teeth empty. -1 = not picked.
+     */
+    fun withPicked(rings: Int, cogs: Int) = copy(
+        chainrings = Teeth.chainrings(rings) ?: chainrings,
+        sprockets = Teeth.sprockets(cogs) ?: sprockets,
+    )
 }
 
 /** The teeth tables behind the pattern numbers the derailleur reports. */
@@ -143,6 +152,10 @@ object Teeth {
 
     fun chainrings(pattern: Int) = CHAINRINGS[pattern]
     fun sprockets(pattern: Int) = SPROCKETS[pattern]
+
+    /** pattern numbers that fit a drivetrain with this many rings or cogs, for picking by hand */
+    fun ringPatterns(rings: Int) = CHAINRINGS.filterValues { it.size == rings }.keys.sorted()
+    fun cogPatterns(cogs: Int) = SPROCKETS.filterValues { it.size == cogs }.keys.sorted()
 
     /** Shimano indexes from the hardest gear: pattern[max - position]. */
     fun at(pattern: List<Int>?, position: Int?, max: Int?): Int? {
