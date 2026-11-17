@@ -183,7 +183,7 @@ class MainActivity : ComponentActivity() {
                 HorizontalPager(pager, Modifier.fillMaxSize().statusBarsPadding(), beyondViewportPageCount = 1) { page ->
                     when (page) {
                         0 -> LiveScreen(
-                            bike, profile, bikes.isNotEmpty(), ride, Prefs.wheel(ctx), km, power, needsPermission = !granted && !bike.demo,
+                            bike, profile, bikes.isNotEmpty(), bikes, ride, Prefs.wheel(ctx), km, power, needsPermission = !granted && !bike.demo,
                             onAllow = { askPermissions.launch(permissions()) },
                             onBluetooth = { askBluetooth.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
                             onDemo = { Demo.start(lifecycleScope) },

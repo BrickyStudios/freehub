@@ -15,6 +15,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,9 +49,10 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun LiveScreen(bike: Bike, profile: Profile?, paired: Boolean, ride: RideNow?, wheelMm: Int, km: Double?, power: List<Charge>, needsPermission: Boolean, onAllow: () -> Unit, onBluetooth: () -> Unit, onDemo: () -> Unit, onPaired: (Profile) -> Unit) {
+fun LiveScreen(bike: Bike, profile: Profile?, paired: Boolean, bikes: List<Profile>, ride: RideNow?, wheelMm: Int, km: Double?, power: List<Charge>, needsPermission: Boolean, onAllow: () -> Unit, onBluetooth: () -> Unit, onDemo: () -> Unit, onPaired: (Profile) -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)) {
         StatusLine(bike, profile)
+        if (bikes.size > 1 && !bike.demo) BikeChips(bikes, profile)
         Spacer(Modifier.height(20.dp))
         val g = bike.gears
         when {
@@ -73,6 +76,22 @@ fun LiveScreen(bike: Bike, profile: Profile?, paired: Boolean, ride: RideNow?, w
             else -> Cockpit(g, ride, wheelMm, bike.buttons, bike.battery, bike.battery?.let { Range.remainingKm(it, power) }, km)
         }
         TabBarRoom()
+    }
+}
+
+/** With several bikes: one pill per bike, the chosen one in pink; a tap connects to that bike. */
+@Composable
+private fun BikeChips(bikes: List<Profile>, profile: Profile?) {
+    val ctx = LocalContext.current
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        bikes.forEach { b ->
+            val on = b.address == profile?.address
+            Box(
+                Modifier.background(if (on) P.accent.copy(alpha = 0.16f) else P.surface, Pill)
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button) { Di2.switchTo(ctx, b.address) }
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+            ) { BodyText(b.name, color = if (on) P.accent else P.muted, weight = FontWeight.SemiBold, size = 15.sp) }
+        }
     }
 }
 

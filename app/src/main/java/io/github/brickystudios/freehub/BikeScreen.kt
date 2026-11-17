@@ -62,7 +62,7 @@ fun BikeScreen(
             Field(bike.firmware ?: "–", "Firmware", Modifier.weight(1f))
         }
 
-        if (!bike.demo) GarageSection(profile, bikes, onPaired, onRemove)
+        if (!bike.demo) GarageSection(bike, profile, bikes, onPaired, onRemove)
 
         Spacer(Modifier.height(28.dp))
         Label(tr("Akku", "Battery"))
@@ -228,8 +228,8 @@ private fun cassette(t: List<Int>) = "${t.first()}–${t.last()} · ${t.size}-" 
  * when one of them wakes up, the screens switch to it on their own.
  */
 @Composable
-private fun GarageSection(profile: Profile?, bikes: List<Profile>, onPaired: (Profile) -> Unit, onRemove: (Profile) -> Unit) {
-    val riding = Counter.now.collectAsStateWithLifecycle().value != null
+private fun GarageSection(bike: Bike, profile: Profile?, bikes: List<Profile>, onPaired: (Profile) -> Unit, onRemove: (Profile) -> Unit) {
+    val ctx = LocalContext.current
     var adding by remember { mutableStateOf(bikes.isEmpty()) }
     var confirm by remember(profile?.address) { mutableStateOf(false) }
     Spacer(Modifier.height(24.dp))
@@ -240,8 +240,8 @@ private fun GarageSection(profile: Profile?, bikes: List<Profile>, onPaired: (Pr
         SettingRow(
             b.name,
             (model(b.model) ?: "Di2") + (unitNumber(b.model)?.let { " · $it" } ?: ""),
-            onClick = if (on || riding) null else ({ Garage.select(b.address) }),
-        ) { if (on) BodyText(tr("angezeigt", "shown"), color = P.accent, weight = FontWeight.SemiBold) }
+            onClick = { Di2.switchTo(ctx, b.address) },
+        ) { BikeState(b, on, bike) }
         Divider()
     }
     if (profile != null) {
@@ -256,10 +256,28 @@ private fun GarageSection(profile: Profile?, bikes: List<Profile>, onPaired: (Pr
             }
         }
     }
-    if (riding) BodyText(tr("Während einer Fahrt bleibt das Rad fest.", "The bike stays put during a ride."), Modifier.padding(top = 8.dp), color = P.faint, size = 14.sp)
+    if (bikes.size > 1) BodyText(
+        tr(
+            "Tippe ein Rad an, um dich mit ihm zu verbinden. Stehen mehrere nebeneinander, bleibt Freehub beim gewählten; ein anderes nimmt es nur, wenn das gewählte schläft.",
+            "Tap a bike to connect to it. With several side by side, Freehub stays with the chosen one and only takes another when the chosen one is asleep.",
+        ),
+        Modifier.padding(top = 8.dp), color = P.faint, size = 14.sp,
+    )
     Spacer(Modifier.height(12.dp))
     if (!adding) Action(tr("Weiteres Rad koppeln", "Pair another bike"), Modifier.fillMaxWidth(), primary = false) { adding = true }
     else Panel { PairList { adding = false; onPaired(it) } }
+}
+
+/** "verbunden" for the bike on the link, "wird gesucht" for the chosen one still asleep, nothing for the rest. */
+@Composable
+internal fun BikeState(b: Profile, chosen: Boolean, bike: Bike) {
+    val (text, color) = when {
+        b.address == bike.address && bike.link == Link.CONNECTED -> tr("verbunden", "connected") to P.accent
+        chosen && bike.link == Link.CONNECTING -> tr("verbinde …", "connecting …") to P.muted
+        chosen -> tr("gewählt · wird gesucht", "chosen · looking") to P.muted
+        else -> return
+    }
+    BodyText(text, color = color, weight = FontWeight.SemiBold, size = 14.sp)
 }
 
 /** Developer options: share the capture, read every value, try the derailleur's own memory. */

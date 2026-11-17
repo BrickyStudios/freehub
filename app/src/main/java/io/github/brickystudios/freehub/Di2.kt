@@ -38,6 +38,8 @@ data class Bike(
     val serial: String? = null,
     val buttons: Instant.Buttons? = null,
     val demo: Boolean = false,
+    /** the derailleur this link belongs to */
+    val address: String? = null,
 )
 
 /**
@@ -141,6 +143,8 @@ object Di2 {
     }
 
     private fun stopScan() {
+        main.removeCallbacks(fallback)
+        candidate = null
         if (!scanning) return
         scanning = false
         runCatching { adapter?.bluetoothLeScanner?.stopScan(scanCallback) }
@@ -149,12 +153,21 @@ object Di2 {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             if (!scanning) return
-            val address = result.device.address
-            // a derailleur that is not paired (a brother's bike of the same model next to it): leave it alone
-            if (!Garage.isKnown(address)) return
-            stopScan()
-            main.post { Garage.select(address) }
-            connect(result.device, result.scanRecord?.deviceName)
+            val known = Garage.bikes.value.map { it.address }.toSet()
+            when (pick(result.device.address, Garage.active.value, known)) {
+                // a derailleur that is not paired (a brother's bike of the same model next to it): leave it alone
+                Pick.IGNORE -> Unit
+                Pick.CONNECT -> {
+                    main.removeCallbacks(fallback)
+                    candidate = null
+                    take(result)
+                }
+                // another paired bike: only if the chosen one stays silent
+                Pick.LATER -> if (candidate == null) {
+                    candidate = result
+                    main.postDelayed(fallback, CHOSEN_GRACE_MS)
+                }
+            }
         }
 
         override fun onScanFailed(errorCode: Int) {
@@ -163,8 +176,37 @@ object Di2 {
         }
     }
 
+    private fun take(result: ScanResult) {
+        stopScan()
+        Garage.select(result.device.address)
+        connect(result.device, result.scanRecord?.deviceName)
+    }
+
+    private var candidate: ScanResult? = null
+    /** after the rider picked a bike by hand, stay with it for a while even if another paired one is awake */
+    private var pinnedUntil = 0L
+    private const val CHOSEN_GRACE_MS = 6_000L
+    private const val PIN_MS = 10 * 60_000L
+
+    private val fallback = Runnable {
+        val c = candidate ?: return@Runnable
+        candidate = null
+        if (!scanning || gatt != null || System.currentTimeMillis() < pinnedUntil) return@Runnable
+        take(c)
+    }
+
+    /** The rider tapped a bike: drop the current link and connect to that one only. */
+    fun switchTo(ctx: Context, address: String) {
+        if (address == Garage.active.value && (connectedAddress == address || gatt == null && scanning)) return
+        pinnedUntil = System.currentTimeMillis() + PIN_MS
+        stop()
+        Garage.select(address)
+        start(ctx)
+    }
+
     private fun connect(device: BluetoothDevice, advertisedName: String?) {
-        bike.update { it.copy(link = Link.CONNECTING, name = advertisedName ?: it.name) }
+        if (device.address == Garage.active.value) pinnedUntil = 0L
+        bike.update { it.copy(link = Link.CONNECTING, name = advertisedName ?: it.name, address = device.address) }
         gatt = device.connectGatt(app, false, callback, BluetoothDevice.TRANSPORT_LE)
     }
 
@@ -183,7 +225,7 @@ object Di2 {
                     DevLog.note("link lost")
                     endMemory(tr("Verbindung weg nach $memoryPackets Paketen. Mitschnitt teilen hilft.", "Link lost after $memoryPackets packets. Sharing the capture helps."))
                     Counter.linkLost()
-                    bike.update { it.copy(link = Link.SEARCHING, buttons = null) }
+                    bike.update { it.copy(link = Link.SEARCHING, buttons = null, address = null) }
                     if (wanted) scan()
                 }
             }

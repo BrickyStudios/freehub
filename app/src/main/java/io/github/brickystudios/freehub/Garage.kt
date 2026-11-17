@@ -42,6 +42,19 @@ data class Profile(
     }
 }
 
+enum class Pick { CONNECT, LATER, IGNORE }
+
+/**
+ * What to do with a derailleur heard while looking for a bike. Pure, so the JVM tests cover it.
+ * Strangers are ignored; the chosen bike is connected at once; another paired bike only after the chosen one
+ * stayed silent for a moment, so two paired bikes standing side by side never swap on their own.
+ */
+fun pick(address: String, active: String?, known: Set<String>): Pick = when {
+    address !in known -> Pick.IGNORE
+    active == null || address == active || active !in known -> Pick.CONNECT
+    else -> Pick.LATER
+}
+
 /** The garage file: the bikes and which one the screens show. Pure, so the JVM tests cover it. */
 object GarageFile {
     fun write(bikes: List<Profile>, active: String?): String =

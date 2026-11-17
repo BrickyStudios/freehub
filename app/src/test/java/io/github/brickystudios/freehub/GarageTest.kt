@@ -42,3 +42,23 @@ class GarageTest {
         assertNull(unitNumber("RDR7150"))
     }
 }
+
+class PickTest {
+    private val a = "A"
+    private val b = "B"
+
+    @Test fun theChosenBikeWinsWhenBothAreAwake() {
+        assertEquals(Pick.CONNECT, pick(a, active = a, known = setOf(a, b)))
+        assertEquals(Pick.LATER, pick(b, active = a, known = setOf(a, b))) // only if the chosen one stays silent
+    }
+
+    @Test fun strangersAreNeverTouched() {
+        assertEquals(Pick.IGNORE, pick("brother", active = a, known = setOf(a)))
+        assertEquals(Pick.IGNORE, pick("brother", active = null, known = emptySet()))
+    }
+
+    @Test fun withoutAChoiceAnyPairedBikeWill() {
+        assertEquals(Pick.CONNECT, pick(b, active = null, known = setOf(a, b)))
+        assertEquals(Pick.CONNECT, pick(b, active = "removed", known = setOf(a, b)))
+    }
+}
