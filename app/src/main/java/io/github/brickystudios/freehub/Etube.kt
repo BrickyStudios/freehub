@@ -40,13 +40,34 @@ object Etube {
     /** group `0x33` echoed in byte 1 of a real gear-usage reply (`33 33 …`); `33 01 …` is only a status packet */
     const val GEAR_USAGE_REPLY_GROUP = 0x33
 
+    /** the command bytes for the gear-usage read: slot 0x00, group 0x33, command 0x04, log 0, sequence 1, high speed */
+    private val GEAR_USAGE_BODY = hex("003304000101")
+
+    /** E-TUBE's frame check, `Common.createFcs`: low byte of (sum of the bytes + 1) */
+    fun fcs(bytes: ByteArray): Byte = (bytes.sumOf { it.toInt() and 0xFF } + 1).toByte()
+
     /**
-     * The gear-usage read, in the framing a real RD-R7150 accepted — BikeBridge's unit-command opcode `0x13`:
-     * slot `0x00`, write opcode `0x13`, group `0x33`, command `0x04`, log 0, start sequence 1, transfer mode 1
-     * (high speed). E-TUBE sends this **once** and then collects the sequences the derailleur streams on its own,
-     * ending after 3 s of silence. The command is sent once; Freehub must not re-send, or the stream restarts at 1.
+     * A DCAS frame as E-TUBE sends unit commands: control byte 0x48, the body, then the one-byte FCS at the
+     * second-to-last position and an end byte last (the receiver checks the FCS over everything before it, so the
+     * end byte is outside the FCS). The exact end byte is from `createFrame`, which did not decompile, so it is probed.
      */
-    val GEAR_USAGE = hex("00133304000101")
+    fun dcasFrame(body: ByteArray, end: Int): ByteArray {
+        val head = byteArrayOf(0x48) + body
+        return head + fcs(head) + end.toByte()
+    }
+
+    /**
+     * Gear-usage request candidates for the dev read. `unit13` (BikeBridge's 0x13 opcode) is accepted but only
+     * draws a single status record, no stream; the DCAS frames carry the E-TUBE control byte 0x48 and a frame
+     * check, each with a different end byte, because an earlier DCAS attempt omitted the end byte (wrong FCS
+     * position) and drew no reply at all. The capture shows whether a proper DCAS frame streams the history.
+     */
+    val GEAR_USAGE_PROBES: List<Pair<String, ByteArray>> = listOf(
+        "unit13" to hex("00133304000101"),       // accepted, status only — the control case
+        "dcas-e00" to dcasFrame(GEAR_USAGE_BODY, 0x00),
+        "dcas-e03" to dcasFrame(GEAR_USAGE_BODY, 0x03),
+        "dcas-ebd" to dcasFrame(GEAR_USAGE_BODY, 0xBD),
+    )
 
     /** Passkeys are six digits; anything else read from the unit is not one. */
     fun passkeyOrDefault(raw: ByteArray?): String =

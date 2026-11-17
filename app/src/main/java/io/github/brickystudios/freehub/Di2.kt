@@ -319,7 +319,9 @@ object Di2 {
     private var memoryPackets = 0
     private var memoryListening = false
     private const val MEMORY_STEP_MS = 6_000L
-    private const val MEMORY_LISTEN_MS = 17_000L
+    private const val MEMORY_LISTEN_MS = 19_000L
+    /** gap between the candidate gear-usage requests, long enough for a reply or a short stream to land first */
+    private const val MEMORY_PROBE_STEP_MS = 4_000L
 
     fun readMemory() {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
@@ -351,6 +353,16 @@ object Di2 {
         endMemory(tr("Fertig: $memoryPackets Pakete empfangen. Jetzt Mitschnitt teilen.", "Done: $memoryPackets packets received. Now share the capture."))
     }
 
+    /** Sends gear-usage request candidate [i], then schedules the next after a gap long enough for a stream to arrive. */
+    private fun sendProbe(i: Int) {
+        if (!memoryPending) return
+        val probes = Etube.GEAR_USAGE_PROBES
+        val (label, bytes) = probes.getOrNull(i) ?: return
+        DevLog.note("gear-usage probe: $label")
+        write(Etube.SERVICE, Etube.PCE_COMMAND, bytes)
+        kick()
+        if (i + 1 < probes.size) main.postDelayed({ sendProbe(i + 1) }, MEMORY_PROBE_STEP_MS)
+    }
 
     /** Ends the memory read and reconnects, because the unit stays in command mode otherwise. */
     private fun endMemory(text: String) {
@@ -379,9 +391,7 @@ object Di2 {
                     memoryListening = true
                     memory.value = tr("Angemeldet, lese Gangnutzung …", "Logged in, reading gear usage …")
                     write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
-                    // send once; high speed streams every sequence on its own, re-sending would restart it at 1
-                    DevLog.note("gear-usage request (high speed, then listen)")
-                    write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.GEAR_USAGE)
+                    sendProbe(0)
                     main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
                 }
             }

@@ -116,7 +116,7 @@ Some phones need a bonded link before the indication arrives. Pairing is "just w
 
 ## 0x18FF E-TUBE
 
-The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the developer options, to read the gear usage history the derailleur keeps itself. Status: **login and the gear-usage command are confirmed on a real RD-R7150** (firmware 4.1.0.0): the derailleur replies to `00 13 33 04 00 01 01` with a gear record (see below). Decoding the per-gear bytes is still open.
+The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the developer options, to read the gear usage history the derailleur keeps itself. Status: **login is confirmed on a real RD-R7150** (firmware 4.1.0.0) and the gear-usage command is accepted (the derailleur replies to `00 13 33 04 00 01 01`), but it only returns a single status record so far, not the history stream — see below; the DCAS framing is still being probed.
 
 | UUID | Name |
 |---|---|
@@ -161,7 +161,11 @@ Three candidates were sent at the bike; only the first drew a gear reply:
 
 So the reply on `0x2AF9` is `33 33 <data…>`: byte 0 is the PCE response opcode `0x33`, byte 1 the group `0x33` (a status reply instead has byte 1 `0x01`). The data is plain, not encrypted — only the login on `0x2AF3`/`0x2AF4`/`0x2AF8` is.
 
-The command is sent **once**. In high speed E-TUBE then collects the sequences the derailleur streams on its own, ending after 3 s of silence (RD alone: 1 to 7; with a front derailleur: 1 to 13); it never re-sends. Freehub first re-sent the command per sequence and got the same first packet back thirteen times — re-sending restarts the stream at sequence 1 — so it now sends once and listens. Each sequence is expected to hold little-endian `uint16` gear times in minutes, the last a `uint32` overflow bitmask adding 65,536 minutes per set bit; the field offsets are still being read off a capture that holds more than one sequence. The UI turns the per-gear minutes into percentages with the largest-remainder method.
+But `00 13 33 04 …` only ever draws that one status record: sent per sequence it answers the same packet thirteen times, and sent once it answers once and then nothing for 17 s. So this opcode form is accepted but does not start the history stream.
+
+E-TUBE sends the gear-usage read through its DCAS layer — control byte `0x48`, the body, a one-byte FCS `(sum of the framed bytes + 1) & 0xFF` at the **second-to-last** position, then an end byte (`createFrame`, which did not decompile, sets the end byte; the receiver's FCS check covers everything before it, so the end byte is outside the FCS). A first DCAS attempt put the FCS last with no end byte, so its FCS sat at the wrong position and the derailleur answered nothing. The dev read now probes the corrected frame `48 00 33 04 00 01 01 82 <end>` with a few end bytes, to see whether a proper DCAS frame streams the history.
+
+A real stream (once it is unlocked) is expected to carry, per sequence, little-endian `uint16` gear times in minutes, the last a `uint32` overflow bitmask adding 65,536 minutes per set bit; the UI turns the per-gear minutes into percentages with the largest-remainder method. If no framing draws a stream, the derailleur may simply hold no gear-usage history — it reports its cassette and chainrings as `ff ff ff ff`, i.e. it was never set up in E-TUBE, and E-TUBE itself discards replies whose de-framed command byte is not the `0x06` history reply (this status record is `… 3b …`, not that), so it would read nothing here either.
 
 Freehub never writes a setting and never touches the firmware service `0x18FE`.
 

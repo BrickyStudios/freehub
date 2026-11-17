@@ -20,10 +20,19 @@ class EtubeTest {
         assertEquals("000000", Etube.passkeyOrDefault("12345a".toByteArray()))
     }
 
-    @Test fun gearUsageRequestIsTheFramingTheDerailleurAccepted() {
-        // slot 0x00, write opcode 0x13, group 0x33, cmd 0x04, log 0, sequence 1, high speed; sent once, then the unit streams
-        assertEquals("00 13 33 04 00 01 01", Etube.GEAR_USAGE.hex())
+    @Test fun gearUsageProbesAreWellFormed() {
+        val probes = Etube.GEAR_USAGE_PROBES.toMap()
+        assertEquals("00 13 33 04 00 01 01", probes["unit13"]!!.hex())
         assertEquals(0x33, Etube.GEAR_USAGE_REPLY_GROUP)
+        // DCAS: 0x48 + body + FCS (at the second-to-last byte) + end byte; sum(48 00 33 04 00 01 01)=0x81, +1=0x82
+        assertEquals("48 00 33 04 00 01 01 82 00", probes["dcas-e00"]!!.hex())
+        assertEquals("48 00 33 04 00 01 01 82 03", probes["dcas-e03"]!!.hex())
+        assertEquals("48 00 33 04 00 01 01 82 bd", probes["dcas-ebd"]!!.hex())
+    }
+
+    @Test fun fcsIsLowByteOfSumPlusOne() {
+        assertEquals(0x82.toByte(), Etube.fcs(Etube.hex("48003304000101")))
+        assertEquals(0x00.toByte(), Etube.fcs(Etube.hex("ff"))) // 255 + 1 wraps to 0
     }
 
     @Test fun characteristicShortNames() {
