@@ -2,6 +2,8 @@ package io.github.brickystudios.freehub
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -49,7 +51,7 @@ fun tr(de: String, en: String) = if (locale().language == "de") de else en
 /** numbers in the app's language: 3,33 in German, 3.33 in English */
 fun String.fmt(vararg args: Any?): String = String.format(locale(), this, *args)
 
-/** Colours as tokens. Accent is Maglia pink: the Giro's leader jersey, not a brand colour of anyone's. */
+/** Colours as tokens. The accent is anodised pink, the colour hub makers anodise their freehub bodies in. */
 data class Palette(
     val bg: Color, val surface: Color, val raised: Color, val line: Color,
     /** unused cogs, empty heatmap cells, battery shell */
@@ -132,11 +134,13 @@ fun Divider(modifier: Modifier = Modifier) = Box(modifier.fillMaxWidth().padding
 @Composable
 fun Action(text: String, modifier: Modifier = Modifier, primary: Boolean = true, onClick: () -> Unit) {
     val shape = RoundedCornerShape(6.dp)
+    val source = remember { MutableInteractionSource() }
     Box(
         modifier.heightIn(min = 52.dp)
+            .pressable(source)
             .background(if (primary) P.accent else Color.Transparent, shape)
             .border(1.dp, if (primary) P.accent else P.line, shape)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(source, indication = null, role = Role.Button, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -184,6 +188,9 @@ object Prefs {
     fun setWheel(c: Context, mm: Int) = p(c).edit().putInt("wheel", mm).apply()
     fun background(c: Context) = p(c).getBoolean("background", true)
     fun setBackground(c: Context, on: Boolean) = p(c).edit().putBoolean("background", on).apply()
+    /** a tick per cog while the app is open */
+    fun haptics(c: Context) = p(c).getBoolean("haptics", true)
+    fun setHaptics(c: Context, on: Boolean) = p(c).edit().putBoolean("haptics", on).apply()
     fun lang(c: Context) = p(c).getString("lang", null)
     fun setLang(c: Context, lang: String?) = p(c).edit().putString("lang", lang).apply()
     fun updates(c: Context) = p(c).getBoolean("updates", true)

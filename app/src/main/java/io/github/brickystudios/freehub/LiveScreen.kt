@@ -1,10 +1,12 @@
 package io.github.brickystudios.freehub
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -34,11 +36,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -97,21 +97,22 @@ fun Battery(percent: Int) {
 private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.Buttons?) {
     val front = g.frontTeeth
     val rear = g.rearTeeth
-    // rolls up when the gear gets harder, down when it gets easier: the eye confirms the shift without reading
-    AnimatedContent(
-        targetState = Triple(front, rear, g.rear),
-        transitionSpec = {
-            val up = (targetState.third ?: 0) >= (initialState.third ?: 0)
-            (slideInVertically(tween(180)) { if (up) it / 3 else -it / 3 } + fadeIn(tween(180)))
-                .togetherWith(slideOutVertically(tween(140)) { if (up) -it / 3 else it / 3 } + fadeOut(tween(140)))
-        },
-        label = "gear",
-    ) { (f, r, _) ->
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Num(f?.toString() ?: "–", 120.sp)
-            BodyText("×", Modifier.padding(horizontal = 10.dp), color = P.faint, size = 48.sp)
-            Num(r?.toString() ?: "–", 120.sp, color = P.accent)
-        }
+    val still = reducedMotion()
+    val view = LocalView.current
+    val ctx = LocalContext.current
+    var last by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    LaunchedEffect(g.front, g.rear) {
+        val now = (g.front ?: 1) to (g.rear ?: return@LaunchedEffect)
+        val cogs = last?.let { kotlin.math.abs(now.first - it.first) + kotlin.math.abs(now.second - it.second) } ?: 0
+        last = now
+        if (cogs > 0 && Prefs.haptics(ctx)) view.ticks(cogs)
+    }
+    // only the number that changed moves: it rolls up when the gear gets harder, down when it gets easier,
+    // and settles with a small detent like a pawl dropping in. The old number leaves faster than the new one arrives.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        GearNumber(front, g.front, still, P.ink)
+        BodyText("×", Modifier.padding(horizontal = 10.dp), color = P.faint, size = 48.sp)
+        GearNumber(rear, g.rear, still, P.accent)
     }
     Label(
         tr("Vorne ${g.front ?: "–"}/${g.frontMax ?: "–"} · Hinten ${g.rear ?: "–"}/${g.rearMax ?: "–"}", "Front ${g.front ?: "–"}/${g.frontMax ?: "–"} · Rear ${g.rear ?: "–"}/${g.rearMax ?: "–"}"),
@@ -133,7 +134,7 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
             Spacer(Modifier.height(6.dp))
             val n = (ride?.rear ?: 0).toLong() + (ride?.front ?: 0)
             Row(verticalAlignment = Alignment.Bottom) {
-                Num(count(n), 56.sp)
+                Odometer(n, 56.sp)
                 Spacer(Modifier.width(10.dp))
                 BodyText(shiftsWord(n), color = P.muted, modifier = Modifier.padding(bottom = 8.dp))
             }
@@ -148,7 +149,24 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
     DFlyFlash(buttons)
 }
 
-/** Chainrings left, cassette right; bar height follows the teeth, the gear in use is pink. */
+@Composable
+private fun GearNumber(teeth: Int?, position: Int?, still: Boolean, color: androidx.compose.ui.graphics.Color) {
+    AnimatedContent(
+        targetState = teeth to position,
+        transitionSpec = {
+            val up = (targetState.second ?: 0) >= (initialState.second ?: 0)
+            if (still) fadeIn(tween(0)).togetherWith(fadeOut(tween(0)))
+            else (slideInVertically(spring(dampingRatio = 0.7f, stiffness = 900f)) { if (up) it / 4 else -it / 4 } + fadeIn(tween(120, delayMillis = 40)))
+                .togetherWith(slideOutVertically(tween(90)) { if (up) -it / 5 else it / 5 } + fadeOut(tween(60)))
+        },
+        label = "gear",
+    ) { (t, _) -> Num(t?.toString() ?: "–", 120.sp, color = color) }
+}
+
+/**
+ * Chainrings left, cassette right; bar height follows the teeth. A pink marker slides to the gear in use,
+ * so a held multi-shift shows as one travel across the cogs.
+ */
 @Composable
 private fun Drivetrain(g: Gears) {
     val rings = (g.chainrings ?: List(g.frontMax ?: 1) { 0 }).reversed() // small ring first, like positions
@@ -156,6 +174,9 @@ private fun Drivetrain(g: Gears) {
     val maxTeeth = (rings + cogs).maxOrNull()?.takeIf { it > 0 } ?: 1
     val off = P.track
     val on = P.accent
+    val slide = if (reducedMotion()) snap() else spring<Float>(dampingRatio = 0.8f, stiffness = 500f)
+    val f by animateFloatAsState(((g.front ?: 1) - 1).toFloat(), slide, label = "ring")
+    val r by animateFloatAsState(((g.rear ?: 1) - 1).toFloat(), slide, label = "cog")
     Canvas(
         Modifier.fillMaxWidth().height(96.dp).semantics {
             contentDescription = "Gang ${g.front}/${g.frontMax}, ${g.rear}/${g.rearMax}"
@@ -165,16 +186,22 @@ private fun Drivetrain(g: Gears) {
         val gap = 6.dp.toPx()
         val split = 22.dp.toPx() // air between crank and cassette
         val w = (size.width - split - gap * (bars - 2)) / bars
-        var x = 0f
-        fun bar(teeth: Int, used: Boolean) {
-            // unknown teeth (pattern not in the table): equal bars, still shows the position
-            val h = if (teeth > 0) size.height * (0.28f + 0.72f * teeth / maxTeeth) else size.height * 0.5f
-            drawRoundRect(if (used) on else off, Offset(x, (size.height - h) / 2), Size(w, h), CornerRadius(2.dp.toPx()))
-            x += w + gap
+        val radius = CornerRadius(2.dp.toPx())
+        // unknown teeth (pattern not in the table): equal bars, still shows the position
+        fun height(t: Int) = if (t > 0) size.height * (0.28f + 0.72f * t / maxTeeth) else size.height * 0.5f
+        fun row(teeth: List<Int>, x0: Float, at: Float) {
+            teeth.forEachIndexed { i, t ->
+                val h = height(t)
+                drawRoundRect(off, Offset(x0 + i * (w + gap), (size.height - h) / 2), Size(w, h), radius)
+            }
+            // the marker travels between bars and takes the height of the cog it passes
+            val i0 = at.toInt().coerceIn(0, teeth.lastIndex)
+            val i1 = (i0 + 1).coerceAtMost(teeth.lastIndex)
+            val h = height(teeth[i0]) + (height(teeth[i1]) - height(teeth[i0])) * (at - i0)
+            drawRoundRect(on, Offset(x0 + at * (w + gap), (size.height - h) / 2), Size(w, h), radius)
         }
-        rings.forEachIndexed { i, t -> bar(t, g.front == i + 1) }
-        x += split - gap
-        cogs.forEachIndexed { i, t -> bar(t, g.rear == i + 1) }
+        row(rings, 0f, f)
+        row(cogs, rings.size * (w + gap) + split - gap, r)
     }
 }
 
@@ -187,19 +214,31 @@ private fun DFlyFlash(b: Instant.Buttons?) {
         delay(2_500)
         shown = null
     }
-    val s = shown ?: return
-    Spacer(Modifier.height(12.dp))
-    Panel(pad = 14.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Dot(P.accent)
-            Spacer(Modifier.width(10.dp))
-            BodyText(s.channels.entries.joinToString { (ch, p) -> "D-FLY $ch · ${pressName(p)}" }, weight = FontWeight.Medium)
+    var text by remember { mutableStateOf("") }
+    shown?.let { s -> text = s.channels.entries.joinToString { (ch, p) -> "D-FLY $ch · ${pressName(p)}" } }
+    // in quickly, out quicker: the press is confirmed, then it gets out of the way
+    AnimatedVisibility(
+        visible = shown != null,
+        enter = fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 3 },
+        exit = fadeOut(tween(120)),
+    ) {
+        Column {
+            Spacer(Modifier.height(12.dp))
+            Panel(pad = 14.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Dot(P.accent)
+                    Spacer(Modifier.width(10.dp))
+                    BodyText(text, weight = FontWeight.Medium)
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun Welcome(onAllow: () -> Unit, onDemo: () -> Unit) {
+    Ratchet(Modifier.size(72.dp))
+    Spacer(Modifier.height(28.dp))
     Num(tr("Dein Di2,\nauf einen Blick.", "Your Di2,\nat a glance."), 52.sp)
     Spacer(Modifier.height(16.dp))
     BodyText(
@@ -219,14 +258,9 @@ private fun Welcome(onAllow: () -> Unit, onDemo: () -> Unit) {
 
 @Composable
 private fun Searching(onDemo: () -> Unit) {
-    val pulse = rememberInfiniteTransition(label = "pulse")
-    val a by pulse.animateFloat(0.25f, 1f, infiniteRepeatable(tween(1_100), RepeatMode.Reverse), label = "a")
-    Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
-        val accent = P.accent
-        Canvas(Modifier.size(140.dp).alpha(a)) {
-            drawCircle(accent, radius = size.minDimension / 2 - 2.dp.toPx(), style = Stroke(2.dp.toPx()))
-            drawCircle(accent, radius = size.minDimension / 4, style = Stroke(1.dp.toPx()))
-        }
+    // freewheeling: the ring turns under the still pawl until the derailleur answers
+    Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.CenterStart) {
+        Ratchet(Modifier.size(160.dp), coasting = true)
     }
     Num(tr("Einmal schalten.", "Shift once."), 44.sp)
     Spacer(Modifier.height(10.dp))

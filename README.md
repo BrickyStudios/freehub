@@ -30,6 +30,8 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 - **Ratio and development** (metres per crank turn) for your tyre size.
 - **Shift mode** (manual, Synchro S1, S2), rear fine-tune level, firmware and serial number.
 - **D-Fly buttons**: press one of the extra buttons on the hoods and the app shows which channel arrived.
+- **A tick for every cog.** While the app is open, each shift gives a short buzz per cog, like the pawls of a freehub clicking over the ratchet. You can switch it off.
+- **English or German**, whatever language your phone runs.
 
 With "keep counting with the screen off" on, a notification holds the connection while the phone sits in your jersey pocket. The ride ends ten minutes after the derailleur goes to sleep.
 

@@ -29,7 +29,7 @@ const q=new URLSearchParams(location.search);
 document.documentElement.style.setProperty("--w",q.get("w")+"px");document.documentElement.style.setProperty("--h",q.get("h")+"px");
 // "|" breaks the line, *word* turns pink
 const t=q.get("t").replace("|","<br>").replace(/\*(.+?)\*/g,"<em>$1</em>");
-const logo='<svg viewBox="22 22 64 64"><path fill="#F3F2EE" d="M31,45h5v18h-5z M39,42h5v24h-5z M47,39h5v30h-5z M63,33h5v42h-5z M71,30h5v48h-5z"/><path fill="#FF4D94" d="M55,36h5v36h-5z"/></svg>';
+const logo='<svg viewBox="22 22 64 64"><path fill="#F3F2EE" fill-rule="evenodd" d="M26.00,54.00a28,28 0 1,0 56.00,0a28,28 0 1,0 -56.00,0z M54.00,30.48L59.01,34.47L60.09,31.28L63.90,36.44L65.76,33.63L68.11,39.60L70.63,37.37L71.35,43.74L74.37,42.24L73.42,48.58L76.72,47.91L74.16,53.79L77.52,54.00L73.53,59.01L76.72,60.09L71.56,63.90L74.37,65.76L68.40,68.11L70.63,70.63L64.26,71.35L65.76,74.37L59.42,73.42L60.09,76.72L54.21,74.16L54.00,77.52L48.99,73.53L47.91,76.72L44.10,71.56L42.24,74.37L39.89,68.40L37.37,70.63L36.65,64.26L33.63,65.76L34.58,59.42L31.28,60.09L33.84,54.21L30.48,54.00L34.47,48.99L31.28,47.91L36.44,44.10L33.63,42.24L39.60,39.89L37.37,37.37L43.74,36.65L42.24,33.63L48.58,34.58L47.91,31.28L53.79,33.84L54.00,30.48z"/><path fill="#FF4D94" d="M63.82,48.62L52.52,33.87L51.32,34.59L59.02,51.50z M57.92,50.06a3.50,3.50 0 1,0 7.00,0a3.50,3.50 0 1,0 -7.00,0z"/></svg>';
 document.body.innerHTML = q.get("art")==="wide"
  ? `<div class="wide"><div><div class="brand">${logo}<span>FREEHUB</span></div><h1>${t}</h1><div class="sub">${q.get("s")}</div>
     <div class="chips"><span>No account</span><span>No cloud</span><span>GPL-3.0</span><span>Android</span></div>

@@ -89,6 +89,12 @@ fun BikeScreen(bike: Bike, gears: Gears?, onDemo: (Boolean) -> Unit, onCheckUpda
             BodyText(when (lang) { "de" -> "Deutsch"; "en" -> "English"; else -> tr("wie das Handy", "phone default") }, weight = FontWeight.SemiBold)
         }
         Divider()
+        var haptics by remember { mutableStateOf(Prefs.haptics(ctx)) }
+        SettingRow(tr("Klick bei jedem Gang", "Tick on every shift"), tr("kurze Vibration pro Ritzel, solange die App offen ist", "a short buzz per cog while the app is open"), onClick = {
+            haptics = !haptics
+            Prefs.setHaptics(ctx, haptics)
+        }) { Toggle(haptics) }
+        Divider()
         var background by remember { mutableStateOf(Prefs.background(ctx)) }
         SettingRow(
             tr("Mit Bildschirm aus weiterzählen", "Keep counting with the screen off"),

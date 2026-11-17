@@ -11,7 +11,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -97,7 +102,8 @@ class MainActivity : ComponentActivity() {
             update?.let { u ->
                 UpdateBar(u, onInstall = { scope.launch { Updater.install(ctx) } }, onLater = Updater::later)
             }
-            Box(Modifier.weight(1f)) {
+            // a quick crossfade: tabs change often, so no slide and no delay
+            Crossfade(tab, Modifier.weight(1f), animationSpec = tween(120), label = "tab") { tab ->
                 when (tab) {
                     0 -> LiveScreen(
                         bike, ride, Prefs.wheel(ctx), needsPermission = !granted && !bike.demo,
@@ -136,6 +142,12 @@ private fun NavBar(tab: Int, onTab: (Int) -> Unit) {
     val items = listOf(tr("Live", "Live"), tr("Statistik", "Stats"), tr("Rad", "Bike"))
     Column(Modifier.fillMaxWidth().background(P.bg).navigationBarsPadding()) {
         Divider()
+        // one pink marker that slides to the chosen tab instead of three that blink
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val third = maxWidth / items.size
+            val x by animateDpAsState(third * tab + (third - 28.dp) / 2, tween(200), label = "tabmark")
+            Box(Modifier.offset(x = x).width(28.dp).height(3.dp).background(P.accent))
+        }
         Row(Modifier.fillMaxWidth()) {
             items.forEachIndexed { i, label ->
                 val on = i == tab
@@ -146,8 +158,6 @@ private fun NavBar(tab: Int, onTab: (Int) -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Box(Modifier.width(28.dp).height(3.dp).background(if (on) P.accent else P.bg))
-                    Spacer(Modifier.height(8.dp))
                     Label(label, color = if (on) P.ink else P.faint)
                 }
             }
