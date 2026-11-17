@@ -29,6 +29,15 @@ class EtubeTest {
         assertEquals("00 13 01 2c 00", Etube.unitCommand(0x01, 0x2C, 0).hex())
     }
 
+    @Test fun replyDataVsNoData() {
+        // fw-version reply command 0x2e = 0x2c | 2 -> data
+        assertEquals(true, Etube.replyHasData(Etube.hex("33012e430000fffdc277")))
+        // gear-usage reply command 0x07 = 0x04 | 3 -> no data
+        assertEquals(false, Etube.replyHasData(Etube.hex("3333073b000000fdc277")))
+        // not a 0x33 unit-command reply
+        assertEquals(null, Etube.replyHasData(Etube.hex("100201")))
+    }
+
     @Test fun setShiftModeCommand() {
         // EXTM_RA_SFT_MODE_SEL_SET_C: group 0x0B, command 0xF8, 1 = manual / 0 = synchronized, trailing 0
         assertEquals("00 13 0b f8 01 00", Etube.setShiftMode(true).hex())

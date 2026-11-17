@@ -318,6 +318,9 @@ object Di2 {
     private var memoryNonce: ByteArray? = null
     private var memoryPackets = 0
     private var memoryListening = false
+    private var memoryLastLabel = ""
+    /** per probe label: did the derailleur have data for it (reply command | 2) or not (| 3) */
+    private val memoryResults = mutableListOf<Pair<String, Boolean>>()
     /** what to run once logged in: the read sweep, or a write (e.g. set the shift mode) */
     private var afterLogin: () -> Unit = { sweepProbe(0) }
     private const val MEMORY_STEP_MS = 6_000L
@@ -347,6 +350,8 @@ object Di2 {
         memoryNonce = null
         memoryPackets = 0
         memoryListening = false
+        memoryLastLabel = ""
+        memoryResults.clear()
         afterLogin = action
         memory.value = tr("Melde mich am Schaltwerk an …", "Logging in to the derailleur …")
         queueMemory()
@@ -366,8 +371,17 @@ object Di2 {
     private val memoryStuck = Runnable { endMemory(tr("Keine Antwort vom Schaltwerk. Mitschnitt teilen hilft.", "No answer from the derailleur. Sharing the capture helps.")) }
 
     private val memoryDone = Runnable {
+        val withData = memoryResults.filter { it.second }.map { it.first }.distinct()
         endMemory(when {
-            memoryPackets > 0 -> tr("Fertig: $memoryPackets Antworten. Jetzt Mitschnitt teilen.", "Done: $memoryPackets replies. Now share the capture.")
+            withData.isNotEmpty() -> tr(
+                "Dein Schaltwerk hat Daten für: ${withData.joinToString(", ")}. Der Rest ist leer (nie in E-TUBE eingerichtet). Mitschnitt teilen.",
+                "Your derailleur has data for: ${withData.joinToString(", ")}. The rest is empty (never set up in E-TUBE). Share the capture.",
+            )
+            memoryResults.isNotEmpty() -> tr(
+                "Schaltwerk antwortet, hat aber zu nichts Daten gespeichert (nie in E-TUBE eingerichtet). Mitschnitt teilen.",
+                "The derailleur answers but has no stored data for anything (never set up in E-TUBE). Share the capture.",
+            )
+            memoryPackets > 0 -> tr("Fertig: $memoryPackets Antworten. Mitschnitt teilen.", "Done: $memoryPackets replies. Share the capture.")
             else -> tr("Angemeldet, aber keine Antworten. Mitschnitt teilen.", "Logged in, but no replies. Share the capture.")
         })
     }
@@ -377,6 +391,7 @@ object Di2 {
         if (!memoryPending) return
         val reads = Etube.PROBE_READS
         val (label, bytes) = reads.getOrNull(i) ?: return
+        memoryLastLabel = label
         DevLog.note("probe: $label")
         write(Etube.SERVICE, Etube.PCE_COMMAND, bytes)
         kick()
@@ -416,6 +431,7 @@ object Di2 {
             }
             Etube.PCE_RESPONSE, Etube.FREE_RESPONSE -> {
                 memoryPackets++
+                Etube.replyHasData(v)?.let { if (memoryLastLabel.isNotEmpty()) memoryResults.add(memoryLastLabel to it) }
                 memory.value = tr("Empfange … $memoryPackets Antworten", "Receiving … $memoryPackets replies")
             }
         }

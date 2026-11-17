@@ -75,7 +75,25 @@ object Etube {
         "error-log0" to unitCommand(0x32, 0xCC, 0),        // PCA_HIST_ERR_GET index 0
         "error-log1" to unitCommand(0x32, 0xCC, 1),
         "error-log2" to unitCommand(0x32, 0xCC, 2),
+        "value-1" to unitCommand(0x32, 0x84, 1),           // the value reader takes an id; 0 was empty, try a few
+        "value-2" to unitCommand(0x32, 0x84, 2),
+        "value-3" to unitCommand(0x32, 0x84, 3),
+        "value-4" to unitCommand(0x32, 0x84, 4),
     )
+
+    /**
+     * Whether a `33 <group> <reply command> …` reply carries data. The reply command is the request command
+     * with bit 1 set for data (`& 3 == 2`) or bits 0+1 set when the unit has nothing to send (`& 3 == 3`).
+     * null when it is not a unit-command reply.
+     */
+    fun replyHasData(v: ByteArray): Boolean? {
+        if (v.getOrNull(0)?.toInt()?.and(0xFF) != 0x33) return null
+        return when ((v.getOrNull(2)?.toInt()?.and(0xFF) ?: return null) and 3) {
+            2 -> true
+            3 -> false
+            else -> null
+        }
+    }
 
     /** Passkeys are six digits; anything else read from the unit is not one. */
     fun passkeyOrDefault(raw: ByteArray?): String =

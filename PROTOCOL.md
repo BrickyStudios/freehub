@@ -159,7 +159,7 @@ Freehub sends `00 13 33 04 00 01 01` once and reads the reply command: `0x06` wo
 
 ### Unit commands (the rest of E-TUBE's features)
 
-Every E-TUBE feature is a unit command in the same form — `00 13 <group> <command> <params…>` to `0x2AFA`, reply `33 <group> <command | 2> …` on `0x2AF9`. The group and command bytes come from E-TUBE's own `UnitCommandSetting(…, group, command, …)` call sites (names below only to say what each is for; no Shimano code is in this repo). The reads worth having in a derailleur app:
+Every E-TUBE feature is a unit command in the same form — `00 13 <group> <command> <params…>` to `0x2AFA`, reply `33 <group> <reply command> …` on `0x2AF9`. **The reply command tells data from no data: `command | 2` (`& 3 == 2`) when the unit has data, `command | 3` when it has none.** A sweep of all the reads against the test RD-R7150 answered `command | 2` only for firmware version (`01·2C`) and unit count (`01·94`); everything else — date, shift-mode/synchro config, auto-shift, tampering, gear usage — answered `command | 3`, and the error log and old usage drew no reply at all. So this particular derailleur, never set up in E-TUBE, holds almost nothing to read; a configured one is needed to capture and decode the real payloads. The group and command bytes come from E-TUBE's own `UnitCommandSetting(…, group, command, …)` call sites (names below only to say what each is for; no Shimano code is in this repo). The reads worth having in a derailleur app:
 
 | group·cmd | name | reads |
 |---|---|---|
