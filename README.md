@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/bilder/social-preview.png" alt="Freehub shows gear, battery and shift count of a Shimano Di2 rear derailleur on Android" width="100%">
+<img src="docs/bilder/social-preview.png" alt="Freehub shows gear, battery, range and shift count of a Shimano Di2 rear derailleur on Android" width="100%">
 
 # Freehub: Shimano Di2 app for Android without an account
 
@@ -12,13 +12,13 @@
 [![Stars](https://img.shields.io/github/stars/BrickyStudios/freehub?color=FF4D94&labelColor=0D0E10)](https://github.com/BrickyStudios/freehub/stargazers)
 [![License: GPL-3.0](https://img.shields.io/github/license/BrickyStudios/freehub?color=FF4D94&labelColor=0D0E10)](LICENSE)
 
-**Gear, battery and shift count, read live from a 12-speed Shimano Di2 rear derailleur. No SHIMANO ID, no cloud, no tracking.**
+**Gear, battery range, distance and every shift, read live from a 12-speed Shimano Di2 rear derailleur. No SHIMANO ID, no cloud, no tracking.**
 
 </div>
 
 Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it shows anything. Freehub connects to the rear derailleur over Bluetooth, reads what the derailleur already broadcasts to bike computers, and keeps every number on your phone.
 
-| ![Current gear as 50 × 15 with the cassette below](docs/bilder/1-live.png) | ![All-time shift count and a heatmap of gear usage](docs/bilder/2-stats.png) | ![Battery, firmware and drivetrain of the derailleur](docs/bilder/3-bike.png) | ![The live screen in the light theme](docs/bilder/4-light.png) |
+| ![Current gear as 50 × 19 with battery, range left and the bike’s total distance below](docs/bilder/1-live.png) | ![All-time shift count, distance by GPS and a heatmap of gear usage](docs/bilder/2-stats.png) | ![Battery, range left and drivetrain of the bike](docs/bilder/3-bike.png) | ![The live screen in the light theme](docs/bilder/4-light.png) |
 |---|---|---|---|
 
 ## What it shows
@@ -62,7 +62,7 @@ If yours works (or does not), please open an issue with the model name the app s
 
 1. Download [`Freehub.apk`](https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk) from the latest release.
 2. Open it on your phone and allow the install.
-3. Start Freehub, allow Bluetooth, click a shifter once to wake the derailleur.
+3. Start Freehub. A short setup walks through Bluetooth, pairing your bike (click a shifter once to wake the derailleur), crankset and cassette, auto start and GPS.
 
 Android 8.0 or newer, no Google services needed. Updates come through the app (switch it off under Bike → Settings) or through [Obtainium](https://github.com/ImranR98/Obtainium) with this repository's URL.
 
@@ -81,7 +81,7 @@ Freehub only reads. In the developer options it logs in to the E-TUBE service (`
 
 ## Planned
 
-- **0.4:** turn the gear usage history from the derailleur's memory into the statistics, once a capture from a real derailleur confirms the reply format. Then the error log.
+- **Next:** turn the gear usage history from the derailleur's memory into the statistics, once a capture from a real derailleur confirms the reply format. Then the error log.
 - Later: show the shift settings (Synchro map, multi-shift speed, button mapping). Changing them needs Shimano's authentication handshake and more testing on real hardware first.
 
 ## Build

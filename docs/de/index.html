@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Freehub: Shimano-Di2-App für Android ohne Konto</title>
-<meta name="description" content="Open-Source-App für 12-fach Shimano Di2: aktueller Gang, Akku und Schaltvorgänge live vom Schaltwerk. Ohne SHIMANO ID, ohne Cloud, ohne Tracking.">
+<meta name="description" content="Open-Source-App für 12-fach Shimano Di2: Gang, Akku-Reichweite, Kilometer und Schaltvorgänge live vom Schaltwerk. Ohne SHIMANO ID, ohne Cloud, ohne Tracking.">
 <link rel="canonical" href="https://brickystudios.github.io/freehub/de/">
 <link rel="alternate" hreflang="en" href="https://brickystudios.github.io/freehub/">
 <link rel="alternate" hreflang="de" href="https://brickystudios.github.io/freehub/de/">
 <link rel="alternate" hreflang="x-default" href="https://brickystudios.github.io/freehub/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Freehub: Shimano-Di2-App ohne Konto">
-<meta property="og:description" content="Gang, Akku und Schaltvorgänge für 12-fach Di2, live auf Android. Ohne Konto.">
+<meta property="og:description" content="Gang, Akku, Reichweite und Schaltvorgänge für 12-fach Di2, live auf Android. Ohne Konto.">
 <meta property="og:url" content="https://brickystudios.github.io/freehub/de/">
 <meta property="og:image" content="https://brickystudios.github.io/freehub/bilder/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -20,10 +20,12 @@
 <link rel="stylesheet" href="../style.css">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
-{"@type":"SoftwareApplication","name":"Freehub","operatingSystem":"Android 8.0 oder neuer","applicationCategory":"SportsApplication","softwareVersion":"0.1.0","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk","url":"https://brickystudios.github.io/freehub/de/","screenshot":"https://brickystudios.github.io/freehub/bilder/app/live-de-dark.png","description":"Aktueller Gang, Akku und Schaltvorgänge live vom Schaltwerk einer 12-fach Shimano Di2, per Bluetooth und ohne SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
+{"@type":"SoftwareApplication","name":"Freehub","operatingSystem":"Android 8.0 oder neuer","applicationCategory":"SportsApplication","softwareVersion":"0.6.3","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk","url":"https://brickystudios.github.io/freehub/de/","screenshot":"https://brickystudios.github.io/freehub/bilder/app/live-de-dark.png","description":"Gang, Akku-Reichweite, Kilometer und Schaltvorgänge live vom Schaltwerk einer 12-fach Shimano Di2, per Bluetooth und ohne SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
 {"@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"Brauche ich E-TUBE PROJECT oder eine SHIMANO ID?","acceptedAnswer":{"@type":"Answer","text":"Nein. Freehub liest den Bluetooth-Dienst, den auch Radcomputer nutzen. Du meldest dich nirgends an."}},
-{"@type":"Question","name":"Kann Freehub meine Schalteinstellungen ändern?","acceptedAnswer":{"@type":"Answer","text":"Noch nicht. Version 0.1 liest nur. Synchro-Tabellen oder Tastenbelegung zu ändern braucht Shimanos Anmeldeverfahren und mehr Tests an echten Rädern."}},
+{"@type":"Question","name":"Kann Freehub meine Schalteinstellungen ändern?","acceptedAnswer":{"@type":"Answer","text":"Nein. Freehub liest nur und ändert weder Einstellungen noch Firmware."}},
+{"@type":"Question","name":"Können zwei Leute mit dem gleichen Rad es nutzen?","acceptedAnswer":{"@type":"Answer","text":"Ja. Jedes Handy koppelt einmal sein eigenes Schaltwerk und verbindet sich nur damit. Die Nummer hinter dem Modell, etwa RD-R7150 · 123, unterscheidet zwei Schaltwerke."}},
+{"@type":"Question","name":"Verfolgt Freehub, wo ich fahre?","acceptedAnswer":{"@type":"Answer","text":"Nein. GPS läuft nur, solange eine Fahrt gezählt wird, und Freehub speichert nur die Strecke."}},
 {"@type":"Question","name":"Geht es mit 11-fach Di2?","acceptedAnswer":{"@type":"Answer","text":"Nicht getestet. 11-fach Di2 braucht Shimanos separate Funkeinheit EW-WU111."}},
 {"@type":"Question","name":"Woher kommt das Protokoll?","acceptedAnswer":{"@type":"Answer","text":"Von einem echten RD-R7150 und daraus, wie Shimanos eigene Apps es lesen. PROTOCOL.md im Repository beschreibt jedes Byte."}}
 ]}
@@ -48,22 +50,23 @@
   <section class="container hero">
     <div>
       <h1>Dein Di2, auf einen Blick.</h1>
-      <p class="lead">Gang, Akku und jeder Schaltvorgang deiner 12-fach Shimano Di2. Ohne Konto.</p>
+      <p class="lead">Gang, Akku, Reichweite und jeder Schaltvorgang deiner 12-fach Shimano Di2. Ohne Konto.</p>
       <div class="actions">
         <a class="button" href="https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk">APK herunterladen</a>
         <a class="button quiet" href="https://github.com/BrickyStudios/freehub">Quellcode auf GitHub</a>
       </div>
       <p class="note">Android 8 oder neuer. Kostenlos und quelloffen unter GPL-3.0.</p>
     </div>
-    <img class="screen" src="../bilder/app/live-de-dark.png" width="1080" height="2400" alt="Freehub zeigt den Gang 50 × 15, die Kassette mit dem aktuellen Ritzel in Rosa, Übersetzung 3,33 und Schaltmodus S1">
+    <img class="screen" src="../bilder/app/live-de-dark.png" width="1080" height="2400" alt="Freehub zeigt den Gang 50 × 19, die Kassette mit dem aktuellen Ritzel in Rosa, Akku 81 %, noch etwa 810 km Reichweite und 624 km auf dem Rad">
   </section>
 
   <section class="band">
     <div class="container split">
-      <img class="screen" src="../bilder/app/stats-de-dark.png" width="1080" height="2400" loading="lazy" alt="Statistik: Schaltvorgänge in 13 Fahrten, Schräglauf-Anteil, Lieblingsgang 50 × 17 und eine Heatmap aus Kettenblatt und Ritzel">
+      <img class="screen" src="../bilder/app/stats-de-dark.png" width="1080" height="2400" loading="lazy" alt="Statistik: 2.552 Schaltvorgänge in 13 Fahrten, 624 km per GPS, Schräglauf-Anteil, Lieblingsgang 50 × 17 und eine Heatmap aus Kettenblatt und Ritzel">
       <div>
-        <h2>Jeder Gangwechsel, gezählt.</h2>
+        <h2>Jeder Gangwechsel, jeder Kilometer.</h2>
         <p>Ein Multi-Shift über drei Ritzel zählt als drei. Freehub misst, wie lange du in jedem Kettenblatt und Ritzel fährst, und zeichnet daraus eine Heatmap. Gänge mit Schräglauf sind orange umrandet.</p>
+        <p>Die Strecke misst das GPS deines Handys, solange eine Fahrt läuft. Freehub behält die Kilometer, nie die Route.</p>
         <p>Eine Fahrt endet von selbst, zehn Minuten nachdem das Schaltwerk eingeschlafen ist.</p>
       </div>
     </div>
@@ -73,18 +76,21 @@
     <div class="container">
       <h2>Deine Fahrten bleiben auf dem Handy.</h2>
       <div class="facts">
-        <div><h3>Keine Anmeldung</h3><p>Keine SHIMANO ID, überhaupt kein Konto.</p></div>
-        <div><h3>Eine Verbindung</h3><p>Bluetooth zum Schaltwerk, dazu eine abschaltbare Update-Prüfung bei GitHub.</p></div>
-        <div><h3>Nur lesen</h3><p>Freehub schreibt weder Einstellungen noch Firmware.</p></div>
+        <div><h3>Keine Anmeldung</h3><p>Keine SHIMANO ID, überhaupt kein Konto. Online geht nur eine Update-Prüfung bei GitHub, und die lässt sich abschalten.</p></div>
+        <div><h3>GPS nur bei der Fahrt</h3><p>Freehub speichert nur die Strecke, keine Orte.</p></div>
+        <div><h3>Nur lesen</h3><p>Freehub ändert weder Einstellungen noch Firmware.</p></div>
       </div>
     </div>
   </section>
 
   <section class="band">
     <div class="container split">
-      <img class="screen" src="../bilder/app/bike-de-dark.png" width="1080" height="2400" loading="lazy" alt="Reiter Rad: RD-R7150, Akku, Firmware 4.2.1, Kurbel 50/34, Kassette 11 bis 34">
+      <img class="screen" src="../bilder/app/bike-de-dark.png" width="1080" height="2400" loading="lazy" alt="Reiter Rad: Akku 81 %, noch etwa 810 km Reichweite, Firmware 4.2.1, Kurbel 50/34, Kassette 11 bis 34">
       <div>
-        <h2>Läuft mit 12-fach Di2.</h2>
+        <h2>Nur dein Rad.</h2>
+        <p>Du koppelst dein Schaltwerk einmal. Danach verbindet sich Freehub nur noch damit, das gleiche Rad daneben bleibt unberührt. Mehrere Räder behalten jeweils ihre eigenen Fahrten, Kilometer und den Akku-Verlauf.</p>
+        <p>Der Akku zeigt, wie weit er noch reicht, gelernt aus deinen eigenen Kilometern. Beim ersten Start führt eine kurze Einrichtung durch Bluetooth, Koppeln, Kurbel, Auto-Start und GPS.</p>
+        <h3>Läuft mit 12-fach Di2</h3>
         <table>
           <thead><tr><th scope="col">Gruppe</th><th scope="col">Schaltwerk</th><th scope="col">Status</th></tr></thead>
           <tbody>
@@ -103,7 +109,9 @@
       <h2>Fragen</h2>
       <div class="faq">
         <details><summary>Brauche ich E-TUBE PROJECT oder eine SHIMANO ID?</summary><p>Nein. Freehub liest den Bluetooth-Dienst, den auch Radcomputer nutzen.</p></details>
-        <details><summary>Kann es meine Schalteinstellungen ändern?</summary><p>Noch nicht. Version 0.1 liest nur.</p></details>
+        <details><summary>Kann es meine Schalteinstellungen ändern?</summary><p>Nein. Freehub liest nur.</p></details>
+        <details><summary>Können zwei Leute mit dem gleichen Rad es nutzen?</summary><p>Ja. Jedes Handy koppelt einmal sein eigenes Schaltwerk und verbindet sich nur damit. Die Nummer hinter dem Modell, etwa RD-R7150 · 123, unterscheidet zwei Schaltwerke.</p></details>
+        <details><summary>Verfolgt Freehub, wo ich fahre?</summary><p>Nein. GPS läuft nur, solange eine Fahrt gezählt wird, und Freehub speichert nur die Strecke.</p></details>
         <details><summary>Geht es mit 11-fach Di2?</summary><p>Nicht getestet. 11-fach braucht Shimanos Funkeinheit EW-WU111.</p></details>
         <details><summary>Woher kommt das Protokoll?</summary><p>Von einem echten RD-R7150, Byte für Byte beschrieben in <a href="https://github.com/BrickyStudios/freehub/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</p></details>
       </div>

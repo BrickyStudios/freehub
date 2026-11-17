@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Freehub: Shimano Di2 app for Android, no account</title>
-<meta name="description" content="Open-source Android app for 12-speed Shimano Di2: live gear, battery and shift count from the rear derailleur. No SHIMANO ID, no cloud, no tracking.">
+<meta name="description" content="Open-source Android app for 12-speed Shimano Di2: live gear, battery range, distance and shift count from the rear derailleur. No SHIMANO ID, no cloud, no tracking.">
 <link rel="canonical" href="https://brickystudios.github.io/freehub/">
 <link rel="alternate" hreflang="en" href="https://brickystudios.github.io/freehub/">
 <link rel="alternate" hreflang="de" href="https://brickystudios.github.io/freehub/de/">
 <link rel="alternate" hreflang="x-default" href="https://brickystudios.github.io/freehub/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Freehub: Shimano Di2 app, no account">
-<meta property="og:description" content="Gear, battery and shift count for 12-speed Di2, read live on Android. No account.">
+<meta property="og:description" content="Gear, battery, range and every shift for 12-speed Di2, read live on Android. No account.">
 <meta property="og:url" content="https://brickystudios.github.io/freehub/">
 <meta property="og:image" content="https://brickystudios.github.io/freehub/bilder/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -20,10 +20,12 @@
 <link rel="stylesheet" href="style.css">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
-{"@type":"SoftwareApplication","name":"Freehub","operatingSystem":"Android 8.0 or newer","applicationCategory":"SportsApplication","softwareVersion":"0.1.0","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk","url":"https://brickystudios.github.io/freehub/","screenshot":"https://brickystudios.github.io/freehub/bilder/app/live-en-dark.png","description":"Live gear, battery and shift count from a 12-speed Shimano Di2 rear derailleur over Bluetooth, without a SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
+{"@type":"SoftwareApplication","name":"Freehub","operatingSystem":"Android 8.0 or newer","applicationCategory":"SportsApplication","softwareVersion":"0.6.3","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk","url":"https://brickystudios.github.io/freehub/","screenshot":"https://brickystudios.github.io/freehub/bilder/app/live-en-dark.png","description":"Live gear, battery range, distance and shift count from a 12-speed Shimano Di2 rear derailleur over Bluetooth, without a SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
 {"@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"Do I need E-TUBE PROJECT or a SHIMANO ID?","acceptedAnswer":{"@type":"Answer","text":"No. Freehub reads the Bluetooth service that bike computers use. You never sign in."}},
-{"@type":"Question","name":"Can Freehub change my shift settings?","acceptedAnswer":{"@type":"Answer","text":"Not in version 0.1, which only reads. Changing Synchro maps or button functions needs Shimano’s authentication and more testing on real bikes."}},
+{"@type":"Question","name":"Can Freehub change my shift settings?","acceptedAnswer":{"@type":"Answer","text":"No. Freehub reads; it never changes a setting or the firmware."}},
+{"@type":"Question","name":"Can two people with the same bike use it?","acceptedAnswer":{"@type":"Answer","text":"Yes. Each phone pairs its own derailleur once and connects to that one only. The number after the model, like RD-R7150 · 123, tells two derailleurs apart."}},
+{"@type":"Question","name":"Does Freehub track where I ride?","acceptedAnswer":{"@type":"Answer","text":"No. GPS runs only while a ride is counted, and Freehub stores only the distance."}},
 {"@type":"Question","name":"Does it work with 11-speed Di2?","acceptedAnswer":{"@type":"Answer","text":"Untested. 11-speed Di2 needs Shimano’s separate EW-WU111 wireless unit."}},
 {"@type":"Question","name":"Where does the protocol come from?","acceptedAnswer":{"@type":"Answer","text":"From a real RD-R7150 and from how Shimano’s own apps read it. PROTOCOL.md in the repository documents every byte."}}
 ]}
@@ -48,22 +50,23 @@
   <section class="container hero">
     <div>
       <h1>Your Di2, at a glance.</h1>
-      <p class="lead">Gear, battery and every shift from a 12-speed Shimano Di2. No account.</p>
+      <p class="lead">Gear, battery, range and every shift from a 12-speed Shimano Di2. No account.</p>
       <div class="actions">
         <a class="button" href="https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk">Download the APK</a>
         <a class="button quiet" href="https://github.com/BrickyStudios/freehub">Source on GitHub</a>
       </div>
       <p class="note">Android 8 or newer. Free and open source under GPL-3.0.</p>
     </div>
-    <img class="screen" src="bilder/app/live-en-dark.png" width="1080" height="2400" alt="Freehub showing the gear 50 × 15, the cassette with the current cog in pink, ratio 3.33 and shift mode S1">
+    <img class="screen" src="bilder/app/live-en-dark.png" width="1080" height="2400" alt="Freehub showing the gear 50 × 19, the cassette with the current cog in pink, battery 81 %, about 810 km of range left and 624 km on the bike">
   </section>
 
   <section class="band">
     <div class="container split">
-      <img class="screen" src="bilder/app/stats-en-dark.png" width="1080" height="2400" loading="lazy" alt="Statistics: 2,553 shifts in 13 rides, 1 % cross-chained, favourite gear 50 × 17 and a heatmap of chainring and cog">
+      <img class="screen" src="bilder/app/stats-en-dark.png" width="1080" height="2400" loading="lazy" alt="Statistics: 2,552 shifts in 13 rides, 624 km measured by GPS, 1 % cross-chained, favourite gear 50 × 17 and a heatmap of chainring and cog">
       <div>
-        <h2>Every shift, counted.</h2>
+        <h2>Every shift, every kilometre.</h2>
         <p>A multi-shift across three cogs counts as three. Freehub keeps the time you spend in each chainring and cog and draws it as a heatmap, with cross-chained gears outlined in orange.</p>
+        <p>The distance comes from your phone’s GPS while a ride is counted. Freehub keeps the kilometres, never the route.</p>
         <p>A ride ends on its own ten minutes after the derailleur falls asleep.</p>
       </div>
     </div>
@@ -73,18 +76,21 @@
     <div class="container">
       <h2>Your rides stay on your phone.</h2>
       <div class="facts">
-        <div><h3>No sign-in</h3><p>No SHIMANO ID, no account of any kind.</p></div>
-        <div><h3>One connection</h3><p>Bluetooth to the derailleur, plus an update check on GitHub you can switch off.</p></div>
-        <div><h3>Read only</h3><p>Freehub never writes settings or firmware.</p></div>
+        <div><h3>No sign-in</h3><p>No SHIMANO ID, no account of any kind. The only thing online is an update check on GitHub, and you can switch it off.</p></div>
+        <div><h3>GPS only on a ride</h3><p>Freehub stores the distance only, no positions.</p></div>
+        <div><h3>Read only</h3><p>Freehub never changes a setting or the firmware.</p></div>
       </div>
     </div>
   </section>
 
   <section class="band">
     <div class="container split">
-      <img class="screen" src="bilder/app/bike-en-dark.png" width="1080" height="2400" loading="lazy" alt="Bike screen: RD-R7150, battery 81 %, firmware 4.2.1, crankset 50/34, cassette 11 to 34">
+      <img class="screen" src="bilder/app/bike-en-dark.png" width="1080" height="2400" loading="lazy" alt="Bike screen: battery 81 %, about 810 km of range left, firmware 4.2.1, crankset 50/34, cassette 11 to 34">
       <div>
-        <h2>Works with 12-speed Di2.</h2>
+        <h2>Your bike only.</h2>
+        <p>You pair your derailleur once. From then on Freehub connects to that one only, so the same bike leaning next to yours stays untouched. Several bikes each keep their own rides, distance and battery log.</p>
+        <p>The battery shows how far it still goes, learned from your own kilometres. On first start a short setup walks through Bluetooth, pairing, crankset, auto start and GPS.</p>
+        <h3>Works with 12-speed Di2</h3>
         <table>
           <thead><tr><th scope="col">Group</th><th scope="col">Rear derailleur</th><th scope="col">Status</th></tr></thead>
           <tbody>
@@ -103,7 +109,9 @@
       <h2>Questions</h2>
       <div class="faq">
         <details><summary>Do I need E-TUBE PROJECT or a SHIMANO ID?</summary><p>No. Freehub reads the Bluetooth service bike computers use.</p></details>
-        <details><summary>Can it change my shift settings?</summary><p>Not yet. Version 0.1 only reads.</p></details>
+        <details><summary>Can it change my shift settings?</summary><p>No. Freehub only reads.</p></details>
+        <details><summary>Can two people with the same bike use it?</summary><p>Yes. Each phone pairs its own derailleur once and connects to that one only. The number after the model, like RD-R7150 · 123, tells two derailleurs apart.</p></details>
+        <details><summary>Does Freehub track where I ride?</summary><p>No. GPS runs only while a ride is counted, and Freehub stores only the distance.</p></details>
         <details><summary>Does it work with 11-speed Di2?</summary><p>Untested. 11-speed needs Shimano’s EW-WU111 wireless unit.</p></details>
         <details><summary>Where does the protocol come from?</summary><p>From a real RD-R7150, documented byte by byte in <a href="https://github.com/BrickyStudios/freehub/blob/main/PROTOCOL.md">PROTOCOL.md</a>.</p></details>
       </div>
