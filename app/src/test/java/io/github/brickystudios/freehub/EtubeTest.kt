@@ -2,6 +2,8 @@ package io.github.brickystudios.freehub
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EtubeTest {
@@ -20,19 +22,17 @@ class EtubeTest {
         assertEquals("000000", Etube.passkeyOrDefault("12345a".toByteArray()))
     }
 
-    @Test fun gearUsageProbesAreWellFormed() {
-        val probes = Etube.GEAR_USAGE_PROBES.toMap()
-        assertEquals("00 13 33 04 00 01 01", probes["unit13"]!!.hex())
-        assertEquals(0x33, Etube.GEAR_USAGE_REPLY_GROUP)
-        // DCAS: 0x48 + body + FCS (at the second-to-last byte) + end byte; sum(48 00 33 04 00 01 01)=0x81, +1=0x82
-        assertEquals("48 00 33 04 00 01 01 82 00", probes["dcas-e00"]!!.hex())
-        assertEquals("48 00 33 04 00 01 01 82 03", probes["dcas-e03"]!!.hex())
-        assertEquals("48 00 33 04 00 01 01 82 bd", probes["dcas-ebd"]!!.hex())
-    }
-
-    @Test fun fcsIsLowByteOfSumPlusOne() {
-        assertEquals(0x82.toByte(), Etube.fcs(Etube.hex("48003304000101")))
-        assertEquals(0x00.toByte(), Etube.fcs(Etube.hex("ff"))) // 255 + 1 wraps to 0
+    @Test fun gearUsageRequestAndReplyClassification() {
+        assertEquals("00 13 33 04 00 01 01", Etube.GEAR_USAGE.hex())
+        // the RD-R7150's "nothing stored" reply: opcode 0x33, group 0x33, reply command 0x07
+        assertTrue(Etube.isNoGearUsage(Etube.hex("3333073b00b9c1fdc277")))
+        assertFalse(Etube.isGearUsageData(Etube.hex("3333073b00b9c1fdc277")))
+        // a reply carrying data would be reply command 0x06
+        assertTrue(Etube.isGearUsageData(Etube.hex("33330600000000")))
+        assertFalse(Etube.isNoGearUsage(Etube.hex("33330600000000")))
+        // the plain status packet (byte 1 is 0x01, not the group) is neither
+        assertFalse(Etube.isNoGearUsage(Etube.hex("3301073b00")))
+        assertFalse(Etube.isGearUsageData(Etube.hex("3301073b00")))
     }
 
     @Test fun characteristicShortNames() {

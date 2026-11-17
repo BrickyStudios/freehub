@@ -37,37 +37,29 @@ object Etube {
     /** after login: E-TUBE (and BikeBridge) switch the unit to command mode; live gear reports pause until reconnect */
     val COMMAND_MODE = hex("ff00")
 
-    /** group `0x33` echoed in byte 1 of a real gear-usage reply (`33 33 …`); `33 01 …` is only a status packet */
-    const val GEAR_USAGE_REPLY_GROUP = 0x33
-
-    /** the command bytes for the gear-usage read: slot 0x00, group 0x33, command 0x04, log 0, sequence 1, high speed */
-    private val GEAR_USAGE_BODY = hex("003304000101")
-
-    /** E-TUBE's frame check, `Common.createFcs`: low byte of (sum of the bytes + 1) */
-    fun fcs(bytes: ByteArray): Byte = (bytes.sumOf { it.toInt() and 0xFF } + 1).toByte()
-
     /**
-     * A DCAS frame as E-TUBE sends unit commands: control byte 0x48, the body, then the one-byte FCS at the
-     * second-to-last position and an end byte last (the receiver checks the FCS over everything before it, so the
-     * end byte is outside the FCS). The exact end byte is from `createFrame`, which did not decompile, so it is probed.
+     * The gear-usage read the RD-R7150 accepts (BikeBridge's unit-command opcode 0x13): slot 0x00, opcode 0x13,
+     * group 0x33, command 0x04, log 0, sequence 1, transfer mode 1. The reply on 0x2AF9 is `33 33 <command> …`:
+     * opcode 0x33, group 0x33, then the reply command. A successful read answers command 0x06 (`0x04 | 2`); the
+     * tested derailleur answers 0x07 instead — the no-data code — because it was never set up in E-TUBE and holds
+     * no history. The DCAS `0x48` form of the same command drew no reply on this unit.
      */
-    fun dcasFrame(body: ByteArray, end: Int): ByteArray {
-        val head = byteArrayOf(0x48) + body
-        return head + fcs(head) + end.toByte()
-    }
+    val GEAR_USAGE = hex("00133304000101")
 
-    /**
-     * Gear-usage request candidates for the dev read. `unit13` (BikeBridge's 0x13 opcode) is accepted but only
-     * draws a single status record, no stream; the DCAS frames carry the E-TUBE control byte 0x48 and a frame
-     * check, each with a different end byte, because an earlier DCAS attempt omitted the end byte (wrong FCS
-     * position) and drew no reply at all. The capture shows whether a proper DCAS frame streams the history.
-     */
-    val GEAR_USAGE_PROBES: List<Pair<String, ByteArray>> = listOf(
-        "unit13" to hex("00133304000101"),       // accepted, status only — the control case
-        "dcas-e00" to dcasFrame(GEAR_USAGE_BODY, 0x00),
-        "dcas-e03" to dcasFrame(GEAR_USAGE_BODY, 0x03),
-        "dcas-ebd" to dcasFrame(GEAR_USAGE_BODY, 0xBD),
-    )
+    private const val REPLY_OPCODE = 0x33
+    private const val REPLY_GROUP = 0x33
+    const val REPLY_OK = 0x06      // command 0x04 answered with data
+    const val REPLY_NO_DATA = 0x07 // command 0x04 answered "nothing stored"
+
+    private fun replyCommand(v: ByteArray): Int? =
+        if (v.getOrNull(0)?.toInt()?.and(0xFF) == REPLY_OPCODE && v.getOrNull(1)?.toInt()?.and(0xFF) == REPLY_GROUP)
+            v.getOrNull(2)?.toInt()?.and(0xFF) else null
+
+    /** a 0x2AF9 reply that carries gear-usage data (reply command 0x06) */
+    fun isGearUsageData(v: ByteArray) = replyCommand(v) == REPLY_OK
+
+    /** the derailleur's "no gear usage stored" reply (reply command 0x07) */
+    fun isNoGearUsage(v: ByteArray) = replyCommand(v) == REPLY_NO_DATA
 
     /** Passkeys are six digits; anything else read from the unit is not one. */
     fun passkeyOrDefault(raw: ByteArray?): String =
