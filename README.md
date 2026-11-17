@@ -1,0 +1,94 @@
+<div align="center">
+
+<img src="docs/bilder/social-preview.png" alt="Schaltblick shows gear, battery and shift count of a Shimano Di2 rear derailleur on Android" width="100%">
+
+# Schaltblick: Shimano Di2 app for Android without an account
+
+[![Kotlin](https://img.shields.io/badge/Kotlin-Android-FF4D94?style=for-the-badge&logo=kotlin&logoColor=white)](https://github.com/BrickyStudios/schaltblick)
+
+[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-0D0E10?logo=jetpackcompose&logoColor=FF4D94)](https://developer.android.com/compose)
+[![Bluetooth LE](https://img.shields.io/badge/Bluetooth%20LE-0D0E10?logo=bluetooth&logoColor=FF4D94)](PROTOCOL.md)
+[![Last commit](https://img.shields.io/github/last-commit/BrickyStudios/schaltblick?color=FF4D94&labelColor=0D0E10)](https://github.com/BrickyStudios/schaltblick/commits/main)
+[![Stars](https://img.shields.io/github/stars/BrickyStudios/schaltblick?color=FF4D94&labelColor=0D0E10)](https://github.com/BrickyStudios/schaltblick/stargazers)
+[![License: GPL-3.0](https://img.shields.io/github/license/BrickyStudios/schaltblick?color=FF4D94&labelColor=0D0E10)](LICENSE)
+
+**Gear, battery and shift count, read live from a 12-speed Shimano Di2 rear derailleur. No SHIMANO ID, no cloud, no tracking.**
+
+</div>
+
+Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it shows anything. Schaltblick connects to the rear derailleur over Bluetooth, reads what the derailleur already broadcasts to bike computers, and keeps every number on your phone.
+
+| ![Current gear as 50 × 15 with the cassette below](docs/bilder/1-live.png) | ![All-time shift count and a heatmap of gear usage](docs/bilder/2-stats.png) | ![Battery, firmware and drivetrain of the derailleur](docs/bilder/3-bike.png) | ![The live screen in the light theme](docs/bilder/4-light.png) |
+|---|---|---|---|
+
+## What it shows
+
+- **The gear you are in**, as teeth (50 × 17) and as positions (front 2/2, rear 7/12). The app reads chainrings and cassette from the derailleur, so there is nothing to set up.
+- **Battery** of the Di2 system in percent.
+- **Every shift, counted.** A multi-shift across three cogs counts as three. Per ride and all time, rear and front apart, plus shifts per hour.
+- **Where your time goes**: a heatmap of chainring × cog. Cross-chained combinations have an orange outline, and the share of time you spent in them is on top.
+- **Ratio and development** (metres per crank turn) for your tyre size.
+- **Shift mode** (manual, Synchro S1, S2), rear fine-tune level, firmware and serial number.
+- **D-Fly buttons**: press one of the extra buttons on the hoods and the app shows which channel arrived.
+
+With "keep counting with the screen off" on, a notification holds the connection while the phone sits in your jersey pocket. The ride ends ten minutes after the derailleur goes to sleep.
+
+The demo mode plays a made-up ride and twelve earlier rides, so you can try the app without a Di2. Your real numbers stay untouched.
+
+## Which bikes
+
+Schaltblick talks to the rear derailleur of Shimano's 12-speed wireless Di2 groups:
+
+| Group | Rear derailleur | Status |
+|---|---|---|
+| 105 Di2 R7100 | RD-R7150 | tested on a real bike |
+| Ultegra Di2 R8100 | RD-R8150 | same protocol, untested |
+| Dura-Ace Di2 R9200 | RD-R9250 | same protocol, untested |
+| GRX Di2 RX820 | RD-RX825 | same protocol, untested |
+
+If yours works (or does not), please open an issue with the model name the app shows. 11-speed Di2 needs Shimano's separate EW-WU111 wireless unit and has not been tried.
+
+## Install
+
+1. Download [`Schaltblick.apk`](https://github.com/BrickyStudios/schaltblick/releases/latest/download/Schaltblick.apk) from the latest release.
+2. Open it on your phone and allow the install.
+3. Start Schaltblick, allow Bluetooth, click a shifter once to wake the derailleur.
+
+Android 8.0 or newer, no Google services needed. Updates come through the app (switch it off under Bike → Settings) or through [Obtainium](https://github.com/ImranR98/Obtainium) with this repository's URL.
+
+## Privacy
+
+- The only connections are Bluetooth to your derailleur and, if update checks are on, one request to GitHub's release API at start.
+- Rides and counters live in the app's private storage. Android backup and device transfer are switched off for them.
+- No account, no analytics, no ads.
+
+## How it works
+
+The derailleur advertises a Shimano service (`0x18EF`, "Shimano Bicycle Information") that bike computers subscribe to. Every gear report there carries the shift mode, both positions, the fine-tune levels and pattern numbers for the chainrings and the cassette. Schaltblick subscribes to it and counts the position changes. Byte layout, the teeth tables and the other services are in [PROTOCOL.md](PROTOCOL.md).
+
+Schaltblick only reads. It never writes to the settings service or the firmware update service.
+
+## Planned
+
+- **0.2:** read the gear usage history the derailleur stores itself, so the statistics cover rides from before you installed the app.
+- Later: show the shift settings (Synchro map, multi-shift speed, button mapping). Changing them needs Shimano's authentication handshake and more testing on real hardware first.
+
+## Build
+
+```sh
+JAVA_HOME=/path/to/jdk-17 ./gradlew testDebugUnitTest assembleDebug
+```
+
+The unit tests cover the protocol parsing and the shift counting with byte strings from a real RD-R7150.
+
+## Credits
+
+- [BikeBridge](https://codeberg.org/bg443/BikeBridge) worked out the E-TUBE service for Shimano e-bike motors.
+- [shimano-di2-media-controls](https://github.com/NitorCreations/shimano-di2-media-controls) decoded the D-Fly buttons.
+- [Saira](https://github.com/Omnibus-Type/Saira) by Omnibus-Type, SIL Open Font License.
+
+Shimano, Di2, D-Fly and E-TUBE are trademarks of SHIMANO INC. Schaltblick is an independent project and has no connection to Shimano.
+
+## License
+
+[GPL-3.0](LICENSE)

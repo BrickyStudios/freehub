@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<!-- Repo images: tall 1080x1920 store-style shots and the 1280x640 social preview. Rendered by tools/bilder.mjs -->
+<style>
+@font-face{font-family:SC;src:url(../app/src/main/res/font/sairacondensed_extrabold.ttf);font-weight:800}
+@font-face{font-family:SS;src:url(../app/src/main/res/font/sairasemicondensed_regular.ttf);font-weight:400}
+@font-face{font-family:SS;src:url(../app/src/main/res/font/sairasemicondensed_semibold.ttf);font-weight:600}
+:root{--bg:#0D0E10;--ink:#F3F2EE;--pink:#FF4D94;--muted:#A0A4AA;--line:#2B2F34}
+*{margin:0;box-sizing:border-box}
+html,body{width:var(--w);height:var(--h);overflow:hidden}
+body{background:radial-gradient(120% 70% at 50% 0%,#24151C 0%,var(--bg) 60%);color:var(--ink);font-family:SS,sans-serif}
+.tall{display:flex;flex-direction:column;align-items:center;padding-top:140px}
+h1{font-family:SC,sans-serif;font-weight:800;font-size:118px;line-height:.98;letter-spacing:-.01em;text-align:center;max-width:980px}
+h1 em{font-style:normal;color:var(--pink)}
+.sub{margin-top:30px;font-size:40px;color:var(--muted)}
+.phone{margin-top:90px;width:800px;padding:22px 22px 0;border-radius:72px 72px 0 0;background:#060607;box-shadow:0 0 0 3px var(--line),0 40px 120px rgba(0,0,0,.6)}
+.phone img{display:block;width:100%;border-radius:52px 52px 0 0}
+.wide{display:grid;grid-template-columns:1fr 430px;grid-template-rows:640px;gap:40px;height:100%;padding:0 70px 0 84px;align-items:center}
+.brand{display:flex;align-items:center;gap:16px;font-size:36px;font-weight:600;letter-spacing:.02em}
+.brand svg{width:52px;height:52px;border-radius:12px;background:#000}
+.wide h1{text-align:left;font-size:76px;max-width:none;margin-top:24px}
+.wide .sub{font-size:26px;margin-top:22px}
+.chips{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap}.chips span{font-size:20px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid var(--line);letter-spacing:.06em;text-transform:uppercase}
+.chips span:first-child{border-color:var(--pink);color:var(--pink)}
+.small{margin-top:30px;font-size:22px;color:var(--muted)}
+.wide .phone{width:430px;margin-top:90px;padding:14px 14px 0;border-radius:48px 48px 0 0;align-self:start}
+.wide .phone img{border-radius:36px 36px 0 0}
+</style></head><body><script>
+const q=new URLSearchParams(location.search);
+document.documentElement.style.setProperty("--w",q.get("w")+"px");document.documentElement.style.setProperty("--h",q.get("h")+"px");
+// "|" breaks the line, *word* turns pink
+const t=q.get("t").replace("|","<br>").replace(/\*(.+?)\*/g,"<em>$1</em>");
+const logo='<svg viewBox="22 22 64 64"><path fill="#F3F2EE" d="M31,45h5v18h-5z M39,42h5v24h-5z M47,39h5v30h-5z M63,33h5v42h-5z M71,30h5v48h-5z"/><path fill="#FF4D94" d="M55,36h5v36h-5z"/></svg>';
+document.body.innerHTML = q.get("art")==="wide"
+ ? `<div class="wide"><div><div class="brand">${logo}<span>SCHALTBLICK</span></div><h1>${t}</h1><div class="sub">${q.get("s")}</div>
+    <div class="chips"><span>No account</span><span>No cloud</span><span>GPL-3.0</span><span>Android</span></div>
+    <div class="small">github.com/BrickyStudios/schaltblick</div></div><div class="phone"><img src="${q.get("img")}"></div></div>`
+ : `<div class="tall"><h1>${t}</h1><div class="sub">${q.get("s")}</div><div class="phone"><img src="${q.get("img")}"></div></div>`;
+</script></body></html>
