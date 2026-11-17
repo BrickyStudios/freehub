@@ -294,6 +294,19 @@ private fun Developer(bike: Bike) {
                 ) else tr("Erst verbinden: einmal schalten.", "Connect first: shift once."),
                 color = if (memory != null) P.ink else P.muted, size = 14.sp,
             )
+            Spacer(Modifier.height(16.dp))
+            Label(tr("Schaltmodus schreiben (Test)", "Write shift mode (test)"))
+            Spacer(Modifier.height(6.dp))
+            BodyText(
+                tr("Ändert das Schaltwerk: Vorderumwerfer manuell oder synchronisiert. Reversibel über die Modus-Taste am Lenker. Noch nicht am Rad bestätigt.",
+                   "Changes the derailleur: front shifting manual or synchronized. Reversible with the mode button on the bar. Not yet confirmed on a bike."),
+                color = P.muted, size = 14.sp,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Action(tr("Manuell", "Manual"), Modifier.weight(1f), primary = false) { if (connected) Di2.setShiftMode(true) }
+                Action(tr("Synchro", "Synchro"), Modifier.weight(1f), primary = false) { if (connected) Di2.setShiftMode(false) }
+            }
         }
     }
 }

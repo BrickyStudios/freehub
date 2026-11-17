@@ -318,21 +318,36 @@ object Di2 {
     private var memoryNonce: ByteArray? = null
     private var memoryPackets = 0
     private var memoryListening = false
+    /** what to run once logged in: the read sweep, or a write (e.g. set the shift mode) */
+    private var afterLogin: () -> Unit = { sweepProbe(0) }
     private const val MEMORY_STEP_MS = 6_000L
     /** long enough for the whole probe sweep (one command per [MEMORY_SWEEP_STEP_MS]) plus a little tail */
     private const val MEMORY_LISTEN_MS = 24_000L
     /** gap between the swept read commands, so each reply lands under its own label */
     private const val MEMORY_SWEEP_STEP_MS = 1_000L
 
-    fun readMemory() {
+    /** Developer options: log in and sweep every read command, so one capture shows every reply format. */
+    fun readMemory() = login("memory read: login with E-TUBE handshake") { sweepProbe(0) }
+
+    /**
+     * Developer options: log in and set the shift mode (manual vs synchronized front shifting).
+     * A write — it changes the derailleur, so it only runs when the rider taps it. Reversible with the shifter.
+     */
+    fun setShiftMode(manual: Boolean) = login("set shift mode: ${if (manual) "manual" else "synchronized"}") {
+        DevLog.note("set shift mode ${if (manual) "manual" else "synchronized"}")
+        write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.setShiftMode(manual))
+    }
+
+    private fun login(note: String, action: () -> Unit) {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
         DevLog.on = true
-        DevLog.note("memory read: login with E-TUBE handshake")
+        DevLog.note(note)
         memoryPending = true
         memoryPasskey = null
         memoryNonce = null
         memoryPackets = 0
         memoryListening = false
+        afterLogin = action
         memory.value = tr("Melde mich am Schaltwerk an …", "Logging in to the derailleur …")
         queueMemory()
         kick()
@@ -393,9 +408,9 @@ object Di2 {
                 // the unit indicates APP_OK more than once; start the burst only on the first
                 v.contentEquals(Etube.APP_OK) && !memoryListening -> {
                     memoryListening = true
-                    memory.value = tr("Angemeldet, lese Werte …", "Logged in, reading values …")
+                    memory.value = tr("Angemeldet …", "Logged in …")
                     write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
-                    sweepProbe(0)
+                    afterLogin()
                     main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
                 }
             }

@@ -47,6 +47,12 @@ object Etube {
         byteArrayOf(0x00, 0x13, group.toByte(), command.toByte()) + ByteArray(params.size) { params[it].toByte() }
 
     /**
+     * Set the shift mode (E-TUBE's `DCC_CMD_EXTM_RA_SFT_MODE_SEL_SET_C`): group 0x0B, command 0xF8, then
+     * `1` = manual front shifting, `0` = synchronized, and a trailing 0. A write — it changes the derailleur.
+     */
+    fun setShiftMode(manual: Boolean) = unitCommand(0x0B, 0xF8, if (manual) 1 else 0, 0)
+
+    /**
      * Every read the developer "probe" sweeps after login, so one capture reveals every reply format at once.
      * All read-only (`*_GET`); the parameters are a best guess (mostly a zero), which is enough to see which
      * commands answer and how. Decoding and the matching screens follow from the capture.
