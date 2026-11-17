@@ -61,6 +61,17 @@ object Etube {
     /** the derailleur's "no gear usage stored" reply (reply command 0x07) */
     fun isNoGearUsage(v: ByteArray) = replyCommand(v) == REPLY_NO_DATA
 
+    /** how many error-log entries to read (E-TUBE's `PCA_HIST_ERR_GET` is one index per request) */
+    const val ERROR_LOG_COUNT = 8
+
+    /**
+     * One entry of the derailleur's error history (E-TUBE's `PCA_HIST_ERR_GET`): slot 0x00, opcode 0x13,
+     * group 0x32, command 0xCC, then the entry index. Read-only, read one index at a time. Errors are logged
+     * whatever the drivetrain config, so unlike gear usage this should hold data. The reply format is read off
+     * the first real capture before it is parsed.
+     */
+    fun errorLog(index: Int) = hex("001332cc") + byteArrayOf(index.toByte())
+
     /** Passkeys are six digits; anything else read from the unit is not one. */
     fun passkeyOrDefault(raw: ByteArray?): String =
         raw?.decodeToString()?.trim()?.takeIf { it.length == 6 && it.all(Char::isDigit) } ?: DEFAULT_PASSKEY

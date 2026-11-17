@@ -321,7 +321,9 @@ object Di2 {
     private var memoryGotData = false
     private var memoryNoData = false
     private const val MEMORY_STEP_MS = 6_000L
-    private const val MEMORY_LISTEN_MS = 16_000L
+    private const val MEMORY_LISTEN_MS = 18_000L
+    /** gap between the error-log entry reads */
+    private const val MEMORY_ERRLOG_STEP_MS = 1_000L
 
     fun readMemory() {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
@@ -359,6 +361,15 @@ object Di2 {
         })
     }
 
+    /** Reads error-log entry [i], then schedules the next; E-TUBE reads one index per request (read-only). */
+    private fun sendErrorLog(i: Int) {
+        if (!memoryPending || i >= Etube.ERROR_LOG_COUNT) return
+        DevLog.note("error-log $i")
+        write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.errorLog(i))
+        kick()
+        main.postDelayed({ sendErrorLog(i + 1) }, MEMORY_ERRLOG_STEP_MS)
+    }
+
     /** Ends the memory read and reconnects, because the unit stays in command mode otherwise. */
     private fun endMemory(text: String) {
         main.removeCallbacks(memoryStuck)
@@ -388,6 +399,7 @@ object Di2 {
                     write(Etube.SERVICE, Etube.FEATURE, Etube.COMMAND_MODE)
                     DevLog.note("gear-usage request")
                     write(Etube.SERVICE, Etube.PCE_COMMAND, Etube.GEAR_USAGE)
+                    main.postDelayed({ sendErrorLog(0) }, MEMORY_ERRLOG_STEP_MS) // after the gear-usage reply
                     main.postDelayed(memoryDone, MEMORY_LISTEN_MS)
                 }
             }

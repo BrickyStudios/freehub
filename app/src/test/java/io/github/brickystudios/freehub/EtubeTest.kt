@@ -35,6 +35,12 @@ class EtubeTest {
         assertFalse(Etube.isGearUsageData(Etube.hex("3301073b00")))
     }
 
+    @Test fun errorLogRequestPerIndex() {
+        // slot 0x00, opcode 0x13, group 0x32, command 0xCC (PCA_HIST_ERR_GET), then the entry index
+        assertEquals("00 13 32 cc 00", Etube.errorLog(0).hex())
+        assertEquals("00 13 32 cc 05", Etube.errorLog(5).hex())
+    }
+
     @Test fun characteristicShortNames() {
         assertEquals("2AC1", DevLog.short(Sbi.PERIODIC))
         assertEquals("2A19", DevLog.short(Sbi.BATTERY_LEVEL))

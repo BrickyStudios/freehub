@@ -157,6 +157,10 @@ The reply on `0x2AF9` is `33 33 <command> <data…>`: byte 0 is the PCE response
 
 Freehub sends `00 13 33 04 00 01 01` once and reads the reply command: `0x06` would mean gear data to decode (little-endian `uint16` minutes per gear, the last sequence a `uint32` overflow bitmask adding 65,536 per set bit, shown as percentages by the largest-remainder method); `0x07` it reports plainly as "no stored gear usage". A derailleur configured in E-TUBE would be needed to capture and decode a real `0x06` stream.
 
+### Error log
+
+The derailleur also keeps an error history, which E-TUBE reads with `PCA_HIST_ERR_GET`: group `0x32`, command `0xCC`, one entry index as the parameter. Unlike the gear usage it is read one index per request, not streamed, and errors are logged whatever the drivetrain configuration, so a derailleur never set up in E-TUBE should still have entries. Freehub reads it in the dev memory read as `00 13 32 cc <index>` for the first few indices; the reply format is read off the first real capture before it is parsed into E-TUBE's error entry (an error id, counters and a factor list). Read-only.
+
 Freehub never writes a setting and never touches the firmware service `0x18FE`.
 
 ## How this was worked out
