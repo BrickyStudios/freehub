@@ -20,7 +20,7 @@ The derailleur advertises only while awake. It sleeps when the bike stands still
 | UUID | Name | Used by |
 |---|---|---|
 | `0x18EF` | Shimano Bicycle Information (SBI) | bike computers, E-TUBE RIDE, **Freehub** |
-| `0x18FF` | E-TUBE | E-TUBE PROJECT (settings, logs) |
+| `0x18FF` | E-TUBE | E-TUBE PROJECT (settings, logs), **Freehub** (reads the stored settings) |
 | `0x18FE` | DFU | firmware updates |
 | `0x180F` | Battery | standard |
 | `0x180A` | Device Information | standard |
@@ -116,12 +116,13 @@ Some phones need a bonded link before the indication arrives. Pairing is "just w
 
 ## 0x18FF E-TUBE
 
-The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the developer options, to read the gear usage history the derailleur keeps itself. Status: **login and the gear-usage command are confirmed on a real RD-R7150** (firmware 4.1.0.0). The command is accepted, but this derailleur — never set up in E-TUBE — answers "nothing stored" (reply command `0x07`), so there is no history to read on it; see below.
+The settings channel of E-TUBE PROJECT. Freehub uses it to read what the derailleur has stored about itself (Bike → "Stored in the derailleur"). Everything below is confirmed on two real RD-R7150 (firmware 4.1.0.0): one never set up in E-TUBE, one set up.
 
 | UUID | Name |
 |---|---|
 | `0x2AF3` | auth control (write, indicate) |
 | `0x2AF4` | auth nonce (read, 16 bytes) |
+| `0x2AF5` | written `01` then `00` while the session opens |
 | `0x2AF8` | passkey (six ASCII digits, default `000000`) |
 | `0x2AF9` / `0x2AFA` | PCE response / command |
 | `0x2AFB` / `0x2AFC` | boot response / command |
@@ -130,61 +131,67 @@ The settings and memory channel of E-TUBE PROJECT. Freehub uses it only in the d
 
 ### Login
 
-The handshake [BikeBridge](https://codeberg.org/bg443/BikeBridge) uses for Shimano e-bike motors:
+The handshake [BikeBridge](https://codeberg.org/bg443/BikeBridge) uses for Shimano e-bike motors works for the derailleur too:
 
 ```
 read 2AF4                     → nonce (16 bytes)
 write 2AF3  01 + AES-ECB(key = 00011147a53fa2795248 + passkey as ASCII, nonce)
 indicate    10 01 01          (10 01 02 = wrong passkey)
 write 2AF3  02 + AES-ECB(key = 0002d39ca426c694e30bc922e87bb58d, nonce)
-indicate    10 02 01          logged in
-write 2AFF  FF 00
+indicate    10 02 01          logged in (it may come more than once; act on the first)
 ```
 
-Confirmed live: the RD answers `10 01 01` to the passkey frame and `10 02 01` to the app frame, so the two BikeBridge AES keys and the default passkey `000000` are correct for the derailleur, not only for e-bike motors. The RD indicates `10 02 01` more than once; act on the first.
+### The session
+
+What E-TUBE sends right after the login, taken byte for byte from an Android HCI snoop of E-TUBE PROJECT and then reproduced by Freehub:
+
+```
+write 2AFF  ff 00             command mode
+write 2AFA  00 05             reply 25 …
+write 2AFA  00 13 01 1c 00    unit id
+write 2AF5  01, then 00
+write 2AFA  00 13 01 2c 00    firmware version
+write 2AFA  00 03 00          setProtocolMode → the derailleur streams its settings on 2AFD
+```
+
+**Press the button on the back of the derailleur first.** E-TUBE asks for it too; without it the session opens but nothing streams.
+
+A write to `0x2AFA` is `00 <control> <payload>`: byte 0 is the BLE block header (`00` for one block), then the control byte. Replies on `0x2AF9` lead with `control | 0x20` (`13` → `33`, `03` → `23`, `05` → `25`). A unit command is control `0x13`: `00 13 <group> <command> <params…>`, answered `33 <group> <reply command> <data…>`. The reply command tells data from no data: `command | 2` when the unit has something, `command | 3` when it has nothing.
+
+When the session is done, drop the link: the derailleur stays in command mode until it reconnects.
+
+### The settings stream on 0x2AFD
+
+After `00 03 00` the derailleur sends one notification per stored setting, unasked, as `00 <group> <command> <p0 p1 p2 p3>` plus three bytes that change per session. `0xFF` in a parameter means "not stored". Group `0x0A` is the front derailleur, `0x0B` the rear, `0x20` common, `0x26` the battery, `0x40` radio, `0x4A` the clock.
+
+| group·cmd | meaning | example |
+|---|---|---|
+| `0B·18` | rear positions, min and max | `01 0c` = 1–12 |
+| `0A·18` | front positions, min and max | `01 02` = 1–2 |
+| `0B·08` | current rear position | `0a` = 10 |
+| `0A·08` | current front position | `01` |
+| `0B·00` | shift mode, `0` = manual | |
+| `0A·B0` | chainring pattern (table above) | `06 00` = 50/34 |
+| `0B·B0` | cassette pattern (table above) | `12 00` = 11–34 |
+| `0B·20` | rear fine-tune range, signed | `ee 12` = −18 … +18 |
+| `26·10` | battery state of charge | `64` = 100 % |
+| `26·40` | capacity left | `5a` = 90 % |
+| `20·0C` | suspension (none on a road bike) | `00` |
+
+The bike set up in E-TUBE stored `0A·B0 06 00` and `0B·B0 12 00`: exactly its 50/34 crankset and 11–34 cassette. The one never set up stores `ff ff` there and also reports `ff ff ff ff` as its patterns in `0x2AC1`, which is why Freehub lets the rider pick the teeth by hand.
+
+Not decoded yet: `0B·0C`, `0B·14`, `0B·44`, `0B·54`, `0B·6C`, `0B·7C`, `0A·10`, `01·B0`, `02·00`, `40·48`. The synchronised-shift map (group `0x32`, read separately with `00 13 32 ac …`) and the error log (`00 13 32 cc <index>`) answer only on a derailleur that has something stored there; neither has been captured with data so far.
 
 ### Gear usage history
 
-The unit command is group `0x33`, command `0x04`, payload `00 01 01` (log `0` = travelling time, sequence `1`, transfer mode `1` = high speed). E-TUBE calls it `DCC_CMD_PCA2_HIST2_USE_GET`. A 2×12 reports sequences 1 to 13 (front-low 1–6, front-top 7–12, overflow 13); a rear derailleur alone 1 to 7. The overflow sequence is a bitmask (the counters are 16 bit and wrap at 65,536).
+E-TUBE's gear usage request is `00 13 33 04 00 01 01` (group `0x33`, command `0x04`). Both test derailleurs answer `33 33 07 …`, that is `0x04 | 3`: nothing stored. A derailleur that logged gear usage would answer `0x06` with little-endian `uint16` minutes per gear; none has been seen yet.
 
-The framing was found by reading the decompiled E-TUBE PROJECT and [BikeBridge](https://codeberg.org/bg443/BikeBridge), then tried against a real RD-R7150. Source citations are kept out of this repo.
+### Writes
 
-**The command is written to `0x2AFA` as `00 13 33 04 00 <seq> 01`** — slot `0x00`, write opcode `0x13`, group `0x33`, command `0x04`, log 0, the sequence, transfer mode 1. The leading `0x13` is the piece Freehub was missing: BikeBridge uses it for every unit command on this characteristic, and the derailleur confirmed it.
-
-The reply on `0x2AF9` is `33 33 <command> <data…>`: byte 0 is the PCE response opcode `0x33`, byte 1 the group `0x33`, byte 2 the reply command. E-TUBE expects the reply command to be the request command with bit 1 set, `0x04 | 2 = 0x06`, for data. The data is plain, not encrypted — only the login on `0x2AF3`/`0x2AF4`/`0x2AF8` is.
-
-**On the tested RD-R7150 the reply command is `0x07`, not `0x06`** — `0x06 | 1`, the derailleur's "nothing stored" answer. It is the same record every time (`33 33 07 3b 00 b9 c1 fd c2 77`), whatever the sequence byte, whether sent once or per sequence; and the DCAS `0x48` form of the command (control byte, body, FCS at the second-to-last byte, end byte — no BLE byte-stuffing, since `setEscape`/`removeEscape` are never called on this path) drew no reply at all. So there is no history to stream: this derailleur was never set up in E-TUBE (it reports its cassette and chainrings as `ff ff ff ff`), so it logged no gear usage, and E-TUBE itself — which keeps only replies whose command byte is the `0x06` history reply — would read nothing here either.
-
-Freehub sends `00 13 33 04 00 01 01` once and reads the reply command: `0x06` would mean gear data to decode (little-endian `uint16` minutes per gear, the last sequence a `uint32` overflow bitmask adding 65,536 per set bit, shown as percentages by the largest-remainder method); `0x07` it reports plainly as "no stored gear usage". A derailleur configured in E-TUBE would be needed to capture and decode a real `0x06` stream.
-
-### Unit commands (the rest of E-TUBE's features)
-
-Every E-TUBE feature is a unit command in the form `<slot> 13 <group> <command> <params…>` to `0x2AFA`, reply `33 <group> <reply command> …` on `0x2AF9`. **The reply command tells data from no data: `command | 2` (`& 3 == 2`) when the unit has data, `command | 3` when it has none.** Byte 0 is the slot — E-TUBE sends each command to the slot of the unit that owns it (`UnitProtocol.getSlotNo()`), which it learns by enumerating the connected units, **not always 0**.
-
-A first sweep sent everything to slot 0: firmware (`01·2C`) and unit count (`01·94`), being system reads, answered with data, but the shift config, date, auto-shift and the rest answered `command | 3`. The same sweep gave the **identical** result on a second derailleur that *had* been set up in E-TUBE — so the empty answers are not an empty derailleur, they are the wrong slot: those commands belong to units at other slots. The fix is to find each unit's slot (sweep firmware and the shift config across slots 0–5) and then address every read to the right one. The group and command bytes come from E-TUBE's own `UnitCommandSetting(…, group, command, …)` call sites (names below only to say what each is for; no Shimano code is in this repo). The reads worth having in a derailleur app:
-
-| group·cmd | name | reads |
-|---|---|---|
-| `01·2C` | `UNIT_FW_VER_GET` | firmware version |
-| `01·94` | `SYS_HAVE_UNIT_NO_GET` | how many units on the system |
-| `02·14` | `SYS_SLOT_STOCK_NO_GET` | slot / part number |
-| `4A·04` | `TMR_DATE_GET` | the unit's internal date |
-| `32·AC` | `PCA_SYNC_GET` | synchronized-shift config (the shift mode) |
-| `32·EC` | `PCA_SUB_SYNC_GET` | semi-synchronized config |
-| `32·CC` | `PCA_HIST_ERR_GET` | error log, one entry index per request |
-| `32·C4` | `PCA_HIST_USE_GET` | older usage history |
-| `32·84` | `PCA_DATA_VALUE_PART_UNIT_GET` | a general value reader |
-| `0B·EC` | `EXTM_RA_AUTO_SFT_GET` | auto-shift config |
-| `33·64` | `PCA2_TAMPERING_INFO_GET` | tampering flags |
-
-Writes (they change the derailleur, so they stay behind a deliberate action, never the read sweep): `0B·F8` `EXTM_RA_SFT_MODE_SEL_SET` sets the shift mode (`00 13 0b f8 <1 = manual, 0 = synchronized> 00`), `0B·E8` auto-shift, `0B·60` multishift, `32·68` `PCA_POSSET_LV_SET` the adjust level (fine-tune). Skipped: SHIMANO ID / cloud, firmware (`0x18FE`), and the e-bike motor / power-meter groups (`16`, `17`, `38`, `39`).
-
-The current shift mode is already in the live `0x2AC1` data (byte 1). To learn every reply format at once, the developer options sweep all the reads above after login and the listener logs each reply; the per-feature decoding and screens follow from that one capture.
-
-Freehub never writes a setting on its own and never touches the firmware service `0x18FE`.
+Freehub never writes on its own. One write exists in the developer options, as a test: `00 13 0b f8 <1 = manual, 0 = synchronized> 00` sets the shift mode. It has not been confirmed on a bike yet. The mode button on the bar switches back either way. Skipped on purpose: fine-tune, button mapping, teeth patterns, SHIMANO ID, the firmware service `0x18FE`, and the e-bike groups (`16`, `17`, `38`, `39`).
 
 ## How this was worked out
 
-A GATT scan of a real RD-R7150 with nRF Connect, then reading how Shimano's own apps parse the data (E-TUBE RIDE 2.0.13, E-TUBE PROJECT Cyclist 5.4.6), for the sole purpose of interoperability with a component the author owns (§ 69e UrhG, Art. 6 of Directive 2009/24/EC). No Shimano code is part of this repository. Earlier work: [BikeBridge](https://codeberg.org/bg443/BikeBridge) (e-bike side of the E-TUBE service) and [shimano-di2-media-controls](https://github.com/NitorCreations/shimano-di2-media-controls) (D-Fly buttons).
+A GATT scan of a real RD-R7150 with nRF Connect, reading how Shimano's own apps parse the data (E-TUBE RIDE 2.0.13, E-TUBE PROJECT Cyclist 5.4.6), and an Android Bluetooth HCI snoop of E-TUBE PROJECT talking to a derailleur the author's family owns, for the sole purpose of interoperability with a component the author owns (§ 69e UrhG, Art. 6 of Directive 2009/24/EC). No Shimano code is part of this repository. Earlier work: [BikeBridge](https://codeberg.org/bg443/BikeBridge) (e-bike side of the E-TUBE service) and [shimano-di2-media-controls](https://github.com/NitorCreations/shimano-di2-media-controls) (D-Fly buttons).
 
 Shimano, Di2, D-Fly and E-TUBE are trademarks of SHIMANO INC. This project is not affiliated with Shimano.

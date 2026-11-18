@@ -18,7 +18,7 @@
 
 Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it shows anything. Freehub connects to the rear derailleur over Bluetooth, reads what the derailleur already broadcasts to bike computers, and keeps every number on your phone.
 
-| ![Current gear as 50 × 19 with battery, range left and the bike’s total distance below](docs/bilder/1-live.png) | ![All-time shift count, distance by GPS and a heatmap of gear usage](docs/bilder/2-stats.png) | ![Battery, range left and drivetrain of the bike](docs/bilder/3-bike.png) | ![The live screen in the light theme](docs/bilder/4-light.png) |
+| ![Current gear as 50 × 19 with battery, range left and the bike’s total distance below](docs/bilder/1-live.png) | ![All-time shift count, distance by GPS and a heatmap of gear usage](docs/bilder/2-stats.png) | ![Battery, range left and drivetrain of the bike](docs/bilder/3-bike.png) | ![The crankset and cassette stored in the derailleur, and the shift quality: 0 of 2,448 rear shifts sprang back](docs/bilder/4-derailleur.png) |
 |---|---|---|---|
 
 ## What it shows
@@ -30,6 +30,8 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 - **Where your time goes**: a heatmap of chainring × cog. Cross-chained combinations have an orange outline, and the share of time you spent in them is on top.
 - **Ratio and development** (metres per crank turn) for your tyre size.
 - **Shift mode** (manual, Synchro S1, S2), rear fine-tune level, firmware and serial number.
+- **What the derailleur has stored about itself**, read the way E-TUBE reads it: the crankset and cassette it was set up with, the shift mode and the charge left. Press the button on the back of the derailleur, tap Read, wait half a minute. If the derailleur was set up in E-TUBE, one tap takes its teeth over; if it never was, Freehub tells you that no teeth are stored.
+- **Shift quality.** A shift that goes one cog and springs straight back did not hold. Freehub counts those and, after 60 rear shifts, tells you whether the drivetrain catches cleanly or which way to try the fine-tune. It never changes the adjustment itself.
 - **D-Fly buttons**: press one of the extra buttons on the hoods and the app shows which channel arrived.
 - **A tick for every cog.** While the app is open, each shift gives a short buzz per cog, like the pawls of a freehub clicking over the ratchet. You can switch it off.
 - **English or German**, whatever language your phone runs.
@@ -43,7 +45,7 @@ With "start when the derailleur wakes up" on (Android 12 or newer), Freehub does
 
 The demo mode plays a made-up ride and twelve earlier rides, so you can try the app without a Di2. Your real numbers stay untouched.
 
-**Developer options** (Bike → Settings) log every Bluetooth packet to and from the derailleur, read every value once, and try to read the gear usage history the derailleur stores itself (experimental, see [PROTOCOL.md](PROTOCOL.md)). The capture is a text file you can share, instead of setting up Android's HCI log. It contains your derailleur's serial number, so send it privately.
+**Developer options** (Bike → Settings) log every Bluetooth packet to and from the derailleur and read every value once. The capture is a text file you can share, instead of setting up Android's HCI log. It contains your derailleur's serial number, so send it privately. They also hold one test write, switching the shift mode between manual and synchronized; it is not confirmed on a bike yet.
 
 ## Which bikes
 
@@ -77,12 +79,13 @@ Android 8.0 or newer, no Google services needed. Updates come through the app (s
 
 The derailleur advertises a Shimano service (`0x18EF`, "Shimano Bicycle Information") that bike computers subscribe to. Every gear report there carries the shift mode, both positions, the fine-tune levels and pattern numbers for the chainrings and the cassette. Freehub subscribes to it and counts the position changes. Byte layout, the teeth tables and the other services are in [PROTOCOL.md](PROTOCOL.md).
 
-Freehub only reads. In the developer options it logs in to the E-TUBE service (`0x18FF`) to ask for the gear usage history, the same request Shimano's app sends; it never changes a setting and never touches the firmware update service.
+To read what the derailleur has stored, Freehub logs in to the E-TUBE service (`0x18FF`) with the same handshake as Shimano's app and opens the same session; the derailleur then streams its settings. Freehub reads them and drops the link. It never changes a setting on its own and never touches the firmware update service.
 
 ## Planned
 
-- **Next:** turn the gear usage history from the derailleur's memory into the statistics, once a capture from a real derailleur confirms the reply format. Then the error log.
-- Later: show the shift settings (Synchro map, multi-shift speed, button mapping). Changing them needs Shimano's authentication handshake and more testing on real hardware first.
+- **Next:** confirm the shift-mode write on a bike, then offer it outside the developer options.
+- The error log and the Synchro map, once a capture from a derailleur that has them stored shows the reply format. Neither test bike had any.
+- Gear usage history from the derailleur's memory: both test derailleurs answer "nothing stored", so this waits for one that logged it.
 
 ## Build
 
@@ -90,7 +93,7 @@ Freehub only reads. In the developer options it logs in to the E-TUBE service (`
 JAVA_HOME=/path/to/jdk-17 ./gradlew testDebugUnitTest assembleDebug
 ```
 
-The unit tests cover the protocol parsing and the shift counting with byte strings from a real RD-R7150.
+The unit tests cover the protocol parsing, the settings stream and the shift counting, with byte strings from two real RD-R7150.
 
 ## Credits
 

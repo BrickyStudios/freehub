@@ -214,8 +214,8 @@ private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
             Spacer(Modifier.height(8.dp))
             if (cfg == null) BodyText(
                 tr(
-                    "Dein Schaltwerk merkt sich selbst, wie dein Antrieb eingestellt ist. Freehub liest das wie E-TUBE aus — ohne Konto, und ohne etwas zu ändern.",
-                    "Your derailleur keeps its own record of how the drivetrain is set up. Freehub reads it the way E-TUBE does — without an account, and without changing anything.",
+                    "Dein Schaltwerk merkt sich selbst, wie dein Antrieb eingestellt ist. Freehub liest das aus wie E-TUBE, nur ohne Konto, und ändert dabei nichts.",
+                    "Your derailleur keeps its own record of how the drivetrain is set up. Freehub reads it the way E-TUBE does, without an account, and changes nothing.",
                 ),
                 color = P.muted, size = 14.sp,
             ) else {
@@ -230,8 +230,8 @@ private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
                 )
                 BodyText(
                     if (teeth.isEmpty()) tr(
-                        "Dein Schaltwerk war nie in E-TUBE eingerichtet — darum wählst du Kurbel und Kassette oben von Hand.",
-                        "Your derailleur was never set up in E-TUBE — that is why you pick crankset and cassette by hand above.",
+                        "Dein Schaltwerk war nie in E-TUBE eingerichtet. Darum wählst du Kurbel und Kassette oben von Hand.",
+                        "Your derailleur was never set up in E-TUBE. That is why you pick crankset and cassette by hand above.",
                     ) else tr("Kurbel und Kassette, wie sie im Schaltwerk stehen", "Crankset and cassette as the derailleur has them"),
                     color = P.faint, size = 14.sp,
                 )
@@ -260,8 +260,8 @@ private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
             Spacer(Modifier.height(8.dp))
             BodyText(
                 note ?: if (connected) tr(
-                    "Drück vorher den Knopf hinten am Schaltwerk — den verlangt E-TUBE auch. Dauert eine halbe Minute, danach verbindet sich Freehub neu.",
-                    "Press the button on the back of the derailleur first — E-TUBE asks for it too. Takes half a minute, then Freehub reconnects.",
+                    "Drück vorher den Knopf hinten am Schaltwerk, den verlangt E-TUBE auch. Dauert eine halbe Minute, danach verbindet sich Freehub neu.",
+                    "Press the button on the back of the derailleur first; E-TUBE asks for it too. Takes half a minute, then Freehub reconnects.",
                 ) else tr("Erst verbinden: einmal schalten.", "Connect first: shift once."),
                 color = if (note != null) P.ink else P.faint, size = 14.sp,
             )
@@ -300,8 +300,8 @@ private fun ShiftQuality(h: Shifting.Health) {
                     "Die Schaltung greift sauber. Freehub merkt es, wenn ein Gang sofort zurückspringt.",
                     "The drivetrain catches cleanly. Freehub notices when a gear springs straight back.",
                 ) else tr(
-                    "So viele Gänge springen zurück, wenn die Feinjustierung einen Schritt daneben liegt — bei dir meist beim Schalten auf die $side. Probier die Feinjustierung einen Schritt in diese Richtung; den aktuellen Wert zeigt Freehub oben unter Antrieb. Justiert wird am Rad im Justiermodus (Handbuch deines Schaltwerks) oder in E-TUBE — Freehub ändert nichts am Schaltwerk.",
-                    "That many gears spring back when the fine-tune sits one step off — on your bike mostly when shifting to the $side. Try the fine-tune one step that way; Freehub shows the current value under Drivetrain above. You adjust it at the bike in adjust mode (see your derailleur's manual) or in E-TUBE — Freehub changes nothing on the derailleur.",
+                    "So viele Gänge springen zurück, wenn die Feinjustierung einen Schritt daneben liegt. Bei dir passiert es meist beim Schalten auf die $side. Probier die Feinjustierung einen Schritt in diese Richtung; den aktuellen Wert zeigt Freehub oben unter Antrieb. Justiert wird am Rad im Justiermodus (Handbuch deines Schaltwerks) oder in E-TUBE. Freehub selbst ändert nichts am Schaltwerk.",
+                    "That many gears spring back when the fine-tune sits one step off. On your bike it happens mostly when shifting to the $side. Try the fine-tune one step that way; Freehub shows the current value under Drivetrain above. You adjust it at the bike in adjust mode (see your derailleur's manual) or in E-TUBE. Freehub itself changes nothing on the derailleur.",
                 ),
                 color = if (h.clean) P.muted else P.ink, size = 14.sp,
             )

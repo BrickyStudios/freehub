@@ -20,10 +20,11 @@
 <link rel="stylesheet" href="../style.css">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
-{"@type":"SoftwareApplication","name":"Freehub","operatingSystem":"Android 8.0 oder neuer","applicationCategory":"SportsApplication","softwareVersion":"0.6.3","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk","url":"https://brickystudios.github.io/freehub/de/","screenshot":"https://brickystudios.github.io/freehub/bilder/app/live-de-dark.png","description":"Gang, Akku-Reichweite, Kilometer und Schaltvorgänge live vom Schaltwerk einer 12-fach Shimano Di2, per Bluetooth und ohne SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
+{"@type":"SoftwareApplication","name":"Freehub","operatingSystem":"Android 8.0 oder neuer","applicationCategory":"SportsApplication","softwareVersion":"0.7.0","license":"https://www.gnu.org/licenses/gpl-3.0.html","downloadUrl":"https://github.com/BrickyStudios/freehub/releases/latest/download/Freehub.apk","url":"https://brickystudios.github.io/freehub/de/","screenshot":"https://brickystudios.github.io/freehub/bilder/app/live-de-dark.png","description":"Gang, Akku-Reichweite, Kilometer und Schaltvorgänge live vom Schaltwerk einer 12-fach Shimano Di2, per Bluetooth und ohne SHIMANO ID.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}},
 {"@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"Brauche ich E-TUBE PROJECT oder eine SHIMANO ID?","acceptedAnswer":{"@type":"Answer","text":"Nein. Freehub liest den Bluetooth-Dienst, den auch Radcomputer nutzen. Du meldest dich nirgends an."}},
-{"@type":"Question","name":"Kann Freehub meine Schalteinstellungen ändern?","acceptedAnswer":{"@type":"Answer","text":"Nein. Freehub liest nur und ändert weder Einstellungen noch Firmware."}},
+{"@type":"Question","name":"Kann Freehub meine Schalteinstellungen ändern?","acceptedAnswer":{"@type":"Answer","text":"Nein. Freehub liest die Einstellungen, die dein Schaltwerk gespeichert hat, ändert aber von sich aus keine und fasst die Firmware nie an."}},
+{"@type":"Question","name":"Merkt Freehub, wenn meine Di2 nachjustiert werden muss?","acceptedAnswer":{"@type":"Answer","text":"Ja. Freehub zählt Schaltvorgänge, die ein Ritzel weit gehen und sofort zurückspringen. Ab 60 Schaltvorgängen hinten sagt es dir, ob die Kette sauber greift oder in welche Richtung du die Feinjustierung probieren solltest. Justieren tust du selbst, am Rad oder in E-TUBE."}},
 {"@type":"Question","name":"Können zwei Leute mit dem gleichen Rad es nutzen?","acceptedAnswer":{"@type":"Answer","text":"Ja. Jedes Handy koppelt einmal sein eigenes Schaltwerk und verbindet sich nur damit. Die Nummer hinter dem Modell, etwa RD-R7150 · 123, unterscheidet zwei Schaltwerke."}},
 {"@type":"Question","name":"Verfolgt Freehub, wo ich fahre?","acceptedAnswer":{"@type":"Answer","text":"Nein. GPS läuft nur, solange eine Fahrt gezählt wird, und Freehub speichert nur die Strecke."}},
 {"@type":"Question","name":"Geht es mit 11-fach Di2?","acceptedAnswer":{"@type":"Answer","text":"Nicht getestet. 11-fach Di2 braucht Shimanos separate Funkeinheit EW-WU111."}},
@@ -67,7 +68,6 @@
         <h2>Jeder Gangwechsel, jeder Kilometer.</h2>
         <p>Ein Multi-Shift über drei Ritzel zählt als drei. Freehub misst, wie lange du in jedem Kettenblatt und Ritzel fährst, und zeichnet daraus eine Heatmap. Gänge mit Schräglauf sind orange umrandet.</p>
         <p>Die Strecke misst das GPS deines Handys, solange eine Fahrt läuft. Freehub behält die Kilometer, nie die Route.</p>
-        <p>Eine Fahrt endet von selbst, zehn Minuten nachdem das Schaltwerk eingeschlafen ist.</p>
       </div>
     </div>
   </section>
@@ -78,7 +78,7 @@
       <div class="facts">
         <div><h3>Keine Anmeldung</h3><p>Keine SHIMANO ID, überhaupt kein Konto. Online geht nur eine Update-Prüfung bei GitHub, und die lässt sich abschalten.</p></div>
         <div><h3>GPS nur bei der Fahrt</h3><p>Freehub speichert nur die Strecke, keine Orte.</p></div>
-        <div><h3>Nur lesen</h3><p>Freehub ändert weder Einstellungen noch Firmware.</p></div>
+        <div><h3>Nur lesen</h3><p>Freehub ändert von sich aus keine Einstellung und fasst die Firmware nie an.</p></div>
       </div>
     </div>
   </section>
@@ -90,6 +90,7 @@
         <h2>Nur dein Rad.</h2>
         <p>Du koppelst dein Schaltwerk einmal. Danach verbindet sich Freehub nur noch damit, das gleiche Rad daneben bleibt unberührt. Mehrere Räder behalten jeweils ihre eigenen Fahrten, Kilometer und den Akku-Verlauf.</p>
         <p>Der Akku zeigt, wie weit er noch reicht, gelernt aus deinen eigenen Kilometern. Beim ersten Start führt eine kurze Einrichtung durch Bluetooth, Koppeln, Kurbel, Auto-Start und GPS.</p>
+        <p>Es liest auch aus, was das Schaltwerk gespeichert hat, wie E-TUBE ohne Konto, und merkt, wenn Gänge sofort zurückspringen.</p>
         <h3>Läuft mit 12-fach Di2</h3>
         <table>
           <thead><tr><th scope="col">Gruppe</th><th scope="col">Schaltwerk</th><th scope="col">Status</th></tr></thead>
@@ -109,7 +110,8 @@
       <h2>Fragen</h2>
       <div class="faq">
         <details><summary>Brauche ich E-TUBE PROJECT oder eine SHIMANO ID?</summary><p>Nein. Freehub liest den Bluetooth-Dienst, den auch Radcomputer nutzen.</p></details>
-        <details><summary>Kann es meine Schalteinstellungen ändern?</summary><p>Nein. Freehub liest nur.</p></details>
+        <details><summary>Kann es meine Schalteinstellungen ändern?</summary><p>Nein. Freehub ändert von sich aus keine Einstellung.</p></details>
+        <details><summary>Merkt Freehub, wenn meine Di2 nachjustiert werden muss?</summary><p>Ja. Ab 60 Schaltvorgängen hinten sagt es, in welche Richtung du die Feinjustierung probieren solltest.</p></details>
         <details><summary>Können zwei Leute mit dem gleichen Rad es nutzen?</summary><p>Ja. Jedes Handy koppelt einmal sein eigenes Schaltwerk und verbindet sich nur damit. Die Nummer hinter dem Modell, etwa RD-R7150 · 123, unterscheidet zwei Schaltwerke.</p></details>
         <details><summary>Verfolgt Freehub, wo ich fahre?</summary><p>Nein. GPS läuft nur, solange eine Fahrt gezählt wird, und Freehub speichert nur die Strecke.</p></details>
         <details><summary>Geht es mit 11-fach Di2?</summary><p>Nicht getestet. 11-fach braucht Shimanos Funkeinheit EW-WU111.</p></details>

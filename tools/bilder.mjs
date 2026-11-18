@@ -9,7 +9,7 @@ const images = [
   ["1-live.png", 1080, 1920, "tall", "Your gear,|*at a glance*", "Live from the derailleur, no account", app("live-en-dark.png")],
   ["2-stats.png", 1080, 1920, "tall", "Every shift,|*every kilometre*", "shifts by the derailleur, distance by GPS", app("stats-en-dark.png")],
   ["3-bike.png", 1080, 1920, "tall", "Battery and|*range*", "and only ever your own bike", app("bike-en-dark.png")],
-  ["4-light.png", 1080, 1920, "tall", "Day and|*night*", "follows your phone's theme", app("live-en-light.png")],
+  ["4-derailleur.png", 1080, 1920, "tall", "Read the|*derailleur*", "and see if your shifts hold", app("derailleur-en-dark.png")],
   ["social-preview.png", 1280, 640, "wide", "Your Di2,|*no account*", "Gear, battery, range and every shift from a 12-speed Shimano Di2", app("live-en-dark.png")],
 ];
 const browser = await chromium.launch();
