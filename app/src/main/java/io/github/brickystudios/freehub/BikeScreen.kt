@@ -39,6 +39,7 @@ fun BikeScreen(
     autoStart: Boolean?, onAutoStart: (Boolean) -> Unit,
     onDemo: (Boolean) -> Unit, onCheckUpdate: () -> Unit, updateNote: String?, onSetup: () -> Unit,
     profile: Profile?, bikes: List<Profile>, onPaired: (Profile) -> Unit, onRemove: (Profile) -> Unit,
+    health: Shifting.Health,
 ) {
     val ctx = LocalContext.current
     val when_ = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale()) }
@@ -100,6 +101,12 @@ fun BikeScreen(
             }
             Divider()
         }
+
+        Spacer(Modifier.height(28.dp))
+        Stored(bike, profile, when_)
+
+        Spacer(Modifier.height(28.dp))
+        ShiftQuality(health)
 
         Spacer(Modifier.height(28.dp))
         Label(tr("Kilometer", "Distance"))
@@ -186,6 +193,119 @@ fun BikeScreen(
             color = P.faint, size = 13.sp,
         )
         TabBarRoom()
+    }
+}
+
+/**
+ * What the derailleur has stored about itself. Freehub logs in to the E-TUBE service the way Shimano's own app
+ * does, opens the session and reads the settings the derailleur then streams back. It reads, it never writes.
+ * The derailleur only releases them after a press on the button on its back, and it leaves command mode by
+ * dropping the link, so this is a button the rider presses at the bike, not something on every connect.
+ */
+@Composable
+private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
+    val ctx = LocalContext.current
+    val note by Di2.memory.collectAsStateWithLifecycle()
+    val cfg = if (bike.demo) Demo.config() else profile?.config
+    val connected = bike.link == Link.CONNECTED && !bike.demo
+    Panel {
+        Column {
+            Label(tr("Im Schaltwerk gespeichert", "Stored in the derailleur"))
+            Spacer(Modifier.height(8.dp))
+            if (cfg == null) BodyText(
+                tr(
+                    "Dein Schaltwerk merkt sich selbst, wie dein Antrieb eingestellt ist. Freehub liest das wie E-TUBE aus — ohne Konto, und ohne etwas zu ändern.",
+                    "Your derailleur keeps its own record of how the drivetrain is set up. Freehub reads it the way E-TUBE does — without an account, and without changing anything.",
+                ),
+                color = P.muted, size = 14.sp,
+            ) else {
+                // what the live gear report does not already say sits first: the teeth it has stored, and the charge left
+                val teeth = listOfNotNull(
+                    cfg.chainrings?.joinToString("/"),
+                    cfg.sprockets?.let { "${it.first()}–${it.last()}" },
+                ).joinToString(" · ")
+                BodyText(
+                    if (teeth.isEmpty()) tr("Keine Zähne gespeichert", "No teeth stored") else teeth,
+                    weight = FontWeight.SemiBold,
+                )
+                BodyText(
+                    if (teeth.isEmpty()) tr(
+                        "Dein Schaltwerk war nie in E-TUBE eingerichtet — darum wählst du Kurbel und Kassette oben von Hand.",
+                        "Your derailleur was never set up in E-TUBE — that is why you pick crankset and cassette by hand above.",
+                    ) else tr("Kurbel und Kassette, wie sie im Schaltwerk stehen", "Crankset and cassette as the derailleur has them"),
+                    color = P.faint, size = 14.sp,
+                )
+                // a derailleur set up in E-TUBE knows its teeth: take them over instead of picking them by hand
+                val takeable = !bike.demo && ((cfg.ringPattern != null && cfg.ringPattern != Prefs.rings(ctx)) || (cfg.cogPattern != null && cfg.cogPattern != Prefs.cogs(ctx)))
+                if (takeable) Action(tr("Zähne übernehmen", "Use these teeth"), Modifier.padding(top = 10.dp), primary = false) {
+                    cfg.ringPattern?.let { Prefs.setRings(ctx, it) }
+                    cfg.cogPattern?.let { Prefs.setCogs(ctx, it) }
+                    Di2.repick()
+                }
+                Spacer(Modifier.height(10.dp))
+                val rest = listOfNotNull(
+                    cfg.rearGears?.let { "${cfg.frontGears?.second ?: "?"} × ${it.second}" },
+                    cfg.shiftModeManual?.let { if (it) tr("Manuell", "Manual") else "Synchro" },
+                    cfg.capacityPercent?.let { tr("Restkapazität $it %", "$it % capacity left") },
+                    profile?.configAt?.takeIf { it > 0 && !bike.demo }?.let { tr("gelesen ", "read ") + when_.format(Date(it)) },
+                ).joinToString(" · ")
+                BodyText(rest, color = P.muted, size = 14.sp)
+            }
+            if (bike.demo) return@Column
+            Spacer(Modifier.height(14.dp))
+            Action(
+                if (cfg == null) tr("Schaltwerk auslesen", "Read the derailleur") else tr("Neu auslesen", "Read again"),
+                Modifier.fillMaxWidth(), primary = connected && cfg == null,
+            ) { if (connected) Di2.readConfig() }
+            Spacer(Modifier.height(8.dp))
+            BodyText(
+                note ?: if (connected) tr(
+                    "Drück vorher den Knopf hinten am Schaltwerk — den verlangt E-TUBE auch. Dauert eine halbe Minute, danach verbindet sich Freehub neu.",
+                    "Press the button on the back of the derailleur first — E-TUBE asks for it too. Takes half a minute, then Freehub reconnects.",
+                ) else tr("Erst verbinden: einmal schalten.", "Connect first: shift once."),
+                color = if (note != null) P.ink else P.faint, size = 14.sp,
+            )
+        }
+    }
+}
+
+/**
+ * How cleanly the derailleur shifts, from what Freehub counted anyway: a shift that goes one cog and comes
+ * straight back did not hold. Freehub names the direction and leaves the adjusting to the rider.
+ */
+@Composable
+private fun ShiftQuality(h: Shifting.Health) {
+    Panel {
+        Column {
+            Label(tr("Schaltqualität", "Shift quality"))
+            Spacer(Modifier.height(8.dp))
+            if (!h.enough) {
+                BodyText(
+                    tr(
+                        "Ab ${Shifting.ENOUGH} Schaltvorgängen hinten sagt Freehub dir, ob die Kette sauber greift. Bisher: ${count(h.rearShifts)}.",
+                        "From ${Shifting.ENOUGH} rear shifts on, Freehub tells you whether the chain catches cleanly. So far: ${count(h.rearShifts)}.",
+                    ),
+                    color = P.muted,
+                )
+                return@Column
+            }
+            val side = if (h.towardsSmallCogs) tr("kleinen Ritzel", "small cogs") else tr("großen Ritzel", "large cogs")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Field("%.0f %%".fmt(h.share * 100), tr("sprangen zurück", "sprang back"), Modifier.weight(1f), color = if (h.worthALook) P.warn else P.ink)
+                Field(count(h.takenBack), tr("von ${count(h.rearShifts)} hinten", "of ${count(h.rearShifts)} rear"), Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(10.dp))
+            BodyText(
+                if (h.clean) tr(
+                    "Die Schaltung greift sauber. Freehub merkt es, wenn ein Gang sofort zurückspringt.",
+                    "The drivetrain catches cleanly. Freehub notices when a gear springs straight back.",
+                ) else tr(
+                    "So viele Gänge springen zurück, wenn die Feinjustierung einen Schritt daneben liegt — bei dir meist beim Schalten auf die $side. Probier die Feinjustierung einen Schritt in diese Richtung; den aktuellen Wert zeigt Freehub oben unter Antrieb. Justiert wird am Rad im Justiermodus (Handbuch deines Schaltwerks) oder in E-TUBE — Freehub ändert nichts am Schaltwerk.",
+                    "That many gears spring back when the fine-tune sits one step off — on your bike mostly when shifting to the $side. Try the fine-tune one step that way; Freehub shows the current value under Drivetrain above. You adjust it at the bike in adjust mode (see your derailleur's manual) or in E-TUBE — Freehub changes nothing on the derailleur.",
+                ),
+                color = if (h.clean) P.muted else P.ink, size = 14.sp,
+            )
+        }
     }
 }
 
@@ -285,7 +405,6 @@ internal fun BikeState(b: Profile, chosen: Boolean, bike: Bike) {
 private fun Developer(bike: Bike) {
     val ctx = LocalContext.current
     val lines by DevLog.size.collectAsStateWithLifecycle()
-    val memory by Di2.memory.collectAsStateWithLifecycle()
     val connected = bike.link == Link.CONNECTED && !bike.demo
     Panel(Modifier.padding(bottom = 12.dp)) {
         Column {
@@ -302,22 +421,6 @@ private fun Developer(bike: Bike) {
             }
             Spacer(Modifier.height(10.dp))
             Action(tr("Alle Werte lesen", "Read all values"), Modifier.fillMaxWidth(), primary = false) { if (connected) Di2.readAll() }
-            Spacer(Modifier.height(10.dp))
-            BodyText(
-                tr("Vorher den Knopf hinten am Schaltwerk drücken — wie E-TUBE es verlangt. Sonst gibt das Schaltwerk die Einstellungen nicht frei.",
-                   "Press the button on the back of the derailleur first — like E-TUBE asks. Otherwise the derailleur does not release its settings."),
-                color = P.ink, size = 14.sp,
-            )
-            Spacer(Modifier.height(8.dp))
-            Action(tr("Schaltwerk-Speicher lesen", "Read derailleur memory"), Modifier.fillMaxWidth(), primary = connected) { if (connected) Di2.readMemory() }
-            Spacer(Modifier.height(8.dp))
-            BodyText(
-                memory ?: if (connected) tr(
-                    "Experimentell. Meldet sich wie E-TUBE mit dem Passkey an, öffnet die Sitzung und liest die Einstellungen, die das Schaltwerk daraufhin sendet. Liest nur, ändert nichts.",
-                    "Experimental. Logs in like E-TUBE with the passkey, opens the session and reads the settings the derailleur then sends. Reads only, changes nothing.",
-                ) else tr("Erst verbinden: einmal schalten.", "Connect first: shift once."),
-                color = if (memory != null) P.ink else P.muted, size = 14.sp,
-            )
             Spacer(Modifier.height(16.dp))
             Label(tr("Schaltmodus schreiben (Test)", "Write shift mode (test)"))
             Spacer(Modifier.height(6.dp))

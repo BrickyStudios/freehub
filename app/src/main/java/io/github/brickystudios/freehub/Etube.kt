@@ -82,20 +82,53 @@ object Etube {
         val frontGears: Pair<Int, Int>? = null,  // 1..2 on a double
         val shiftModeManual: Boolean? = null,    // true = manual front shift, false = synchronized
         val currentRearGear: Int? = null,
+        val currentFrontGear: Int? = null,
         val batteryPercent: Int? = null,
+        /** what is left of the charge, as the unit reports it; a coarser figure than the battery percent */
+        val capacityPercent: Int? = null,
+        /** the pattern numbers stored in the unit; null = never set up in E-TUBE, which is why the teeth stay empty */
+        val ringPattern: Int? = null,
+        val cogPattern: Int? = null,
     ) {
-        val isEmpty get() = rearGears == null && frontGears == null && shiftModeManual == null &&
-            currentRearGear == null && batteryPercent == null
+        val chainrings get() = ringPattern?.let(Teeth::chainrings)
+        val sprockets get() = cogPattern?.let(Teeth::sprockets)
+        val isEmpty get() = this == Config()
+
+        fun toJson(): org.json.JSONObject = org.json.JSONObject()
+            .put("rear", rearGears?.second).put("rearMin", rearGears?.first)
+            .put("front", frontGears?.second).put("frontMin", frontGears?.first)
+            .put("manual", shiftModeManual).put("gear", currentRearGear).put("ring", currentFrontGear)
+            .put("battery", batteryPercent).put("capacity", capacityPercent)
+            .put("ringPattern", ringPattern).put("cogPattern", cogPattern)
+
+        companion object {
+            fun fromJson(o: org.json.JSONObject): Config {
+                fun int(k: String) = if (o.isNull(k)) null else o.optInt(k)
+                fun pair(min: String, max: String) = int(max)?.let { (int(min) ?: 1) to it }
+                return Config(
+                    rearGears = pair("rearMin", "rear"),
+                    frontGears = pair("frontMin", "front"),
+                    shiftModeManual = if (o.isNull("manual")) null else o.optBoolean("manual"),
+                    currentRearGear = int("gear"), currentFrontGear = int("ring"),
+                    batteryPercent = int("battery"), capacityPercent = int("capacity"),
+                    ringPattern = int("ringPattern"), cogPattern = int("cogPattern"),
+                )
+            }
+        }
     }
 
     /**
      * Decode the records the derailleur streams on 0x2AFD after the session opens. Each is `00 <group> <command>
      * <params…>` (then a 3-byte session tag). The (group, command) → meaning map and byte layout are from E-TUBE's
-     * own code (verified against a real 2×12: rear 1–12, front 1–2, battery percent). `0xFF` means "not stored".
+     * own code; group `0x0A` is the front derailleur, `0x0B` the rear, `0x26` the battery. Checked against captures
+     * from two real 2×12 bikes — one never set up in E-TUBE, one set up, whose stored patterns decode to the
+     * crankset and cassette actually on it. `0xFF` means "not stored".
      */
     fun parseConfig(records: List<ByteArray>): Config {
         var c = Config()
         fun param(v: ByteArray, i: Int) = v.getOrNull(3 + i)?.toInt()?.and(0xFF)?.takeIf { it != 0xFF }
+        // pattern numbers come as two bytes; every capture so far has the high byte at 0, as 0x2AC1 sends them
+        fun pattern(v: ByteArray) = param(v, 0)?.let { it or ((param(v, 1) ?: 0) shl 8) }
         for (v in records) {
             val group = v.getOrNull(1)?.toInt()?.and(0xFF) ?: continue
             val cmd = v.getOrNull(2)?.toInt()?.and(0xFF) ?: continue
@@ -104,7 +137,11 @@ object Etube {
                 0x0A18 -> { val lo = param(v, 0); val hi = param(v, 1); if (lo != null && hi != null && hi in 1..4) c = c.copy(frontGears = lo to hi) }
                 0x0B00 -> param(v, 0)?.let { c = c.copy(shiftModeManual = it == 0) }
                 0x0B08 -> param(v, 0)?.let { if (it in 1..24) c = c.copy(currentRearGear = it) }
+                0x0A08 -> param(v, 0)?.let { if (it in 1..4) c = c.copy(currentFrontGear = it) }
                 0x2610 -> param(v, 0)?.let { if (it in 0..100) c = c.copy(batteryPercent = it) }
+                0x2640 -> param(v, 0)?.let { if (it in 0..100) c = c.copy(capacityPercent = it) }
+                0x0AB0 -> pattern(v)?.let { if (Teeth.chainrings(it) != null) c = c.copy(ringPattern = it) }
+                0x0BB0 -> pattern(v)?.let { if (Teeth.sprockets(it) != null) c = c.copy(cogPattern = it) }
             }
         }
         return c

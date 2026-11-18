@@ -18,6 +18,13 @@ object Demo {
         chainrings = Teeth.chainrings(6), sprockets = Teeth.sprockets(18),
     )
 
+    /** What the made-up derailleur has stored, so Bike shows a full "stored in the derailleur" section. */
+    fun config() = Etube.Config(
+        rearGears = 1 to 12, frontGears = 1 to 2, shiftModeManual = false,
+        currentRearGear = 7, currentFrontGear = 2, batteryPercent = 82, capacityPercent = 80,
+        ringPattern = 6, cogPattern = 18,
+    )
+
     /**
      * A rider who cruises on the big ring around the middle of the cassette and now and then climbs.
      * Synchro S1 drops to the small ring near the largest cogs and back up near the smallest.

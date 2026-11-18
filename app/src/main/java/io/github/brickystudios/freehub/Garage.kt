@@ -22,12 +22,16 @@ data class Profile(
     val wheel: Int = 2136,
     /** the first gear report of the last connection, as hex, so offline screens know rings and cogs */
     val raw: String? = null,
+    /** what the derailleur last reported about itself (Bike → Derailleur), and when */
+    val config: Etube.Config? = null,
+    val configAt: Long = 0,
 ) {
     /** file-name part for this bike's statistics and battery log */
     val key get() = address.filter(Char::isLetterOrDigit).lowercase()
 
     fun toJson(): JSONObject = JSONObject().put("address", address).put("name", name).put("model", model)
         .put("rings", rings).put("cogs", cogs).put("wheel", wheel).put("raw", raw)
+        .put("config", config?.toJson()).put("configAt", configAt)
 
     companion object {
         fun fromJson(o: JSONObject) = Profile(
@@ -38,6 +42,8 @@ data class Profile(
             cogs = o.optInt("cogs", -1),
             wheel = o.optInt("wheel", 2136),
             raw = o.optString("raw").takeIf { it.isNotEmpty() && !o.isNull("raw") },
+            config = o.optJSONObject("config")?.let(Etube.Config::fromJson),
+            configAt = o.optLong("configAt"),
         )
     }
 }

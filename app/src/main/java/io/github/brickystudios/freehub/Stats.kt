@@ -27,7 +27,14 @@ class Ride(val start: Long) {
     /** GPS distance while this ride was counted; 0 without location access */
     var meters = 0.0
     val usage = HashMap<Gear, Long>()
+    /** rear shifts that went one cog and came straight back, by direction: see [Shifting] */
+    var takenBackUp = 0
+        private set
+    var takenBackDown = 0
+        private set
     private var last: Gear? = null
+    private var before: Gear? = null
+    private var lastShiftAt = 0L
     private var lastAt = start
     private var linked = false
 
@@ -36,9 +43,16 @@ class Ride(val start: Long) {
 
     fun onGear(g: Gear, now: Long) {
         tick(now)
-        last?.let {
-            rearShifts += abs(g.rear - it.rear)
-            frontShifts += abs(g.front - it.front)
+        val from = last
+        if (from != null && g != from) {
+            rearShifts += abs(g.rear - from.rear)
+            frontShifts += abs(g.front - from.front)
+            // one cog over and straight back again: that shift did not hold
+            if (g == before && g.front == from.front && abs(g.rear - from.rear) == 1 && now - lastShiftAt <= TAKEN_BACK_MS) {
+                if (from.rear > g.rear) takenBackUp++ else takenBackDown++
+            }
+            before = from
+            lastShiftAt = now
         }
         last = g
         linked = true
@@ -62,14 +76,20 @@ class Ride(val start: Long) {
     fun toJson(): JSONObject = JSONObject()
         .put("start", start).put("end", end).put("rear", rearShifts).put("front", frontShifts)
         .put("m", meters).put("usage", usage.toJson())
+        .put("backUp", takenBackUp).put("backDown", takenBackDown)
 
     companion object {
+        /** a shift and its reversal this close together was not the rider changing their mind */
+        const val TAKEN_BACK_MS = 1_500L
+
         fun fromJson(o: JSONObject) = Ride(o.getLong("start")).apply {
             end = o.getLong("end")
             rearShifts = o.getInt("rear")
             frontShifts = o.getInt("front")
             meters = o.optDouble("m", 0.0)
             usage.putAll(o.optJSONObject("usage").toUsage())
+            takenBackUp = o.optInt("backUp")
+            takenBackDown = o.optInt("backDown")
         }
     }
 }
@@ -82,6 +102,9 @@ data class Totals(
     val rides: List<Ride> = emptyList(),
     /** every GPS metre ever counted, also from rides that dropped off the list */
     val meters: Double = 0.0,
+    /** rear shifts the derailleur took back by itself, by direction: see [Shifting] */
+    val takenBackUp: Long = 0,
+    val takenBackDown: Long = 0,
 ) {
     val shifts get() = rearShifts + frontShifts
     val ms get() = usage.values.sum()
@@ -93,10 +116,13 @@ data class Totals(
         usage = (usage.keys + r.usage.keys).associateWith { (usage[it] ?: 0) + (r.usage[it] ?: 0) },
         rides = (listOf(r) + rides).take(MAX_RIDES),
         meters = meters + r.meters,
+        takenBackUp = takenBackUp + r.takenBackUp,
+        takenBackDown = takenBackDown + r.takenBackDown,
     )
 
     fun toJson(): JSONObject = JSONObject()
         .put("rear", rearShifts).put("front", frontShifts).put("m", meters).put("usage", usage.toJson())
+        .put("backUp", takenBackUp).put("backDown", takenBackDown)
         .put("rides", JSONArray().apply { rides.forEach { put(it.toJson()) } })
 
     companion object {
@@ -107,9 +133,42 @@ data class Totals(
             frontShifts = o.optLong("front"),
             usage = o.optJSONObject("usage").toUsage(),
             meters = o.optDouble("m", 0.0),
+            takenBackUp = o.optLong("backUp"),
+            takenBackDown = o.optLong("backDown"),
             rides = o.optJSONArray("rides")?.let { a -> (0 until a.length()).map { Ride.fromJson(a.getJSONObject(it)) } } ?: emptyList(),
         )
     }
+}
+
+/**
+ * How cleanly the rear derailleur shifts, from the shifts Freehub already counts. A shift that goes one cog and
+ * comes straight back within [Ride.TAKEN_BACK_MS] did not hold: either the chain did not climb the cog, or it
+ * dropped back. A few of those are normal riding; a steady share of them is what Shimano's fine-tune is for.
+ *
+ * Freehub only reads — it never writes an adjustment to the derailleur. Pure, so the JVM tests cover it.
+ */
+object Shifting {
+    /** below this many rear shifts there is nothing to judge */
+    const val ENOUGH = 60L
+    /** from this share of shifts taken back on, the fine-tune is worth a look */
+    const val WORTH_A_LOOK = 0.04f
+
+    data class Health(val rearShifts: Long, val up: Long, val down: Long) {
+        val takenBack get() = up + down
+        val share get() = if (rearShifts > 0) takenBack.toFloat() / rearShifts else 0f
+        val enough get() = rearShifts >= ENOUGH
+        val clean get() = enough && share < WORTH_A_LOOK
+        val worthALook get() = enough && share >= WORTH_A_LOOK
+        /** where the chain struggles: true towards the small cogs (harder), false towards the large ones (easier) */
+        val towardsSmallCogs get() = up >= down
+    }
+
+    /** The ride in progress counts too, so the reading moves while you ride. */
+    fun health(t: Totals, ride: RideNow?): Health = Health(
+        rearShifts = t.rearShifts + (ride?.rear ?: 0),
+        up = t.takenBackUp + (ride?.takenBackUp ?: 0),
+        down = t.takenBackDown + (ride?.takenBackDown ?: 0),
+    )
 }
 
 /** Read-outs over a usage map. */

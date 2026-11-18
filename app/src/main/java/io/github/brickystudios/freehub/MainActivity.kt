@@ -199,6 +199,7 @@ class MainActivity : ComponentActivity() {
                             updateNote = note,
                             onSetup = { Prefs.setOnboarded(ctx, false); onboarded = false },
                             profile = profile, bikes = bikes, onPaired = onPaired, onRemove = onRemove,
+                            health = Shifting.health(totals, ride),
                         )
                     }
                 }

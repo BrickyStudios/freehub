@@ -65,7 +65,23 @@ class EtubeTest {
         assertEquals(true, c.shiftModeManual)
         assertEquals(10, c.currentRearGear)
         assertEquals(100, c.batteryPercent)
-        assertTrue(Etube.parseConfig(listOf(Etube.hex("000bb4ffffffff"))).isEmpty) // unprovisioned teeth → nothing
+        assertTrue(Etube.parseConfig(listOf(Etube.hex("000ab0ffffffff"))).isEmpty) // unprovisioned teeth → nothing
+
+        // records from a bike that WAS set up in E-TUBE: its stored patterns are the parts on it, 50/34 and 11-34
+        val setUp = Etube.parseConfig(
+            listOf("000ab00600ffff", "000bb01200ffff", "000a080102ffff", "0026404600ffff")
+                .map { Etube.hex(it) },
+        )
+        assertEquals(6, setUp.ringPattern)
+        assertEquals(listOf(50, 34), setUp.chainrings)
+        assertEquals(18, setUp.cogPattern)
+        assertEquals(34, setUp.sprockets?.last())
+        assertEquals(1, setUp.currentFrontGear)
+        assertEquals(70, setUp.capacityPercent)
+
+        val back = Etube.Config.fromJson(org.json.JSONObject(setUp.toJson().toString()))
+        assertEquals(setUp, back)
+        assertEquals(Etube.Config(), Etube.Config.fromJson(org.json.JSONObject(Etube.Config().toJson().toString())))
     }
 
     @Test fun sessionFlowHasDistinctLabels() {

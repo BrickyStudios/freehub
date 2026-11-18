@@ -223,7 +223,7 @@ object Di2 {
                     ops.clear()
                     busy = false
                     DevLog.note("link lost")
-                    endMemory(tr("Verbindung weg nach $memoryPackets Paketen. Mitschnitt teilen hilft.", "Link lost after $memoryPackets packets. Sharing the capture helps."))
+                    endMemory(tr("Verbindung weg nach $memoryPackets Paketen.", "Link lost after $memoryPackets packets."))
                     Counter.linkLost()
                     bike.update { it.copy(link = Link.SEARCHING, buttons = null, address = null) }
                     if (wanted) scan()
@@ -347,13 +347,13 @@ object Di2 {
         kick()
     }
 
-    // ---- the derailleur's own memory (0x18FF), developer options, experimental ----
+    // ---- what the derailleur has stored (0x18FF E-TUBE) ----
     //
     //   read passkey + nonce → write 01+AES(passkey key, nonce) → 10 01 01
-    //   → write 02+AES(app key, nonce) → 10 02 01 → write FF 00, then each candidate gear-usage request
-    //   → everything on 2AF9 / 2AFD is logged for [MEMORY_LISTEN_MS] → reconnect for live gears again
+    //   → write 02+AES(app key, nonce) → 10 02 01 → the session E-TUBE runs ([Etube.SESSION_FLOW])
+    //   → the unit streams its config on 2AFD, logged and parsed for [MEMORY_LISTEN_MS] → reconnect for live gears
 
-    /** a sentence for the screen while reading the memory, null when idle */
+    /** a sentence for the screen while reading, null when idle */
     val memory = MutableStateFlow<String?>(null)
     private var memoryPending = false
     private var memoryPasskey: String? = null
@@ -376,10 +376,14 @@ object Di2 {
     /** the ordered steps the current read sends after login: each (label, characteristic, bytes) */
     private var memorySweep: List<Triple<String, java.util.UUID, ByteArray>> = emptyList()
 
-    /** Developer options: log in, run the E-TUBE session; the derailleur then streams its config on 0x2AFD. */
-    fun readMemory() {
+    /**
+     * Logs in to the E-TUBE service and runs the session E-TUBE itself runs; the derailleur then streams what it
+     * has stored on 0x2AFD, which [Etube.parseConfig] turns into [Profile.config]. Reads only. The rider has to
+     * press the button on the derailleur first, and the link drops at the end to leave command mode.
+     */
+    fun readConfig() {
         memorySweep = Etube.SESSION_FLOW
-        login("memory read: login with E-TUBE handshake") { sweepProbe(0) }
+        login("config read: login with E-TUBE handshake") { sweepProbe(0) }
     }
 
     /**
@@ -419,19 +423,16 @@ object Di2 {
         main.postDelayed(memoryStuck, MEMORY_STEP_MS)
     }
 
-    private val memoryStuck = Runnable { endMemory(tr("Keine Antwort vom Schaltwerk. Mitschnitt teilen hilft.", "No answer from the derailleur. Sharing the capture helps.")) }
+    private val memoryStuck = Runnable { endMemory(tr("Keine Antwort vom Schaltwerk. Knopf hinten am Schaltwerk drücken und nochmal.", "No answer from the derailleur. Press the button on its back and try again.")) }
 
     private val memoryDone = Runnable {
         val cfg = Etube.parseConfig(memoryConfig)
+        // keep it with the bike: reading needs the button on the derailleur, so the values should still be there later
+        if (!cfg.isEmpty) Garage.update { it.copy(config = cfg, configAt = System.currentTimeMillis()) }
         endMemory(when {
-            !cfg.isEmpty -> buildList {
-                cfg.rearGears?.let { add(tr("Antrieb ${cfg.frontGears?.second ?: "?"}×${it.second}", "Drivetrain ${cfg.frontGears?.second ?: "?"}×${it.second}")) }
-                cfg.shiftModeManual?.let { add(if (it) tr("Modus Manuell", "Mode Manual") else tr("Modus Synchro", "Mode Synchro")) }
-                cfg.currentRearGear?.let { add(tr("Gang $it", "Gear $it")) }
-                cfg.batteryPercent?.let { add(tr("Akku $it%", "Battery $it%")) }
-            }.joinToString(" · ").let { tr("Gelesen: $it. Mitschnitt teilen.", "Read: $it. Share the capture.") }
-            memoryPackets > 0 -> tr("Fertig: $memoryPackets Antworten. Mitschnitt teilen.", "Done: $memoryPackets replies. Share the capture.")
-            else -> tr("Angemeldet, aber keine Antworten. Mitschnitt teilen.", "Logged in, but no replies. Share the capture.")
+            !cfg.isEmpty -> tr("Ausgelesen. Verbinde wieder …", "Read. Reconnecting …")
+            memoryPackets > 0 -> tr("$memoryPackets Antworten, aber keine Einstellungen. Knopf am Schaltwerk gedrückt?", "$memoryPackets replies, but no settings. Did you press the button on the derailleur?")
+            else -> tr("Angemeldet, aber das Schaltwerk hat nichts gesendet. Knopf am Schaltwerk gedrückt?", "Logged in, but the derailleur sent nothing. Did you press the button on the derailleur?")
         })
     }
 

@@ -8,7 +8,10 @@ import org.json.JSONObject
 import java.io.File
 
 /** What the screens show of the ride in progress. */
-data class RideNow(val start: Long, val rear: Int, val front: Int, val ms: Long, val usage: Map<Gear, Long>, val meters: Double = 0.0)
+data class RideNow(
+    val start: Long, val rear: Int, val front: Int, val ms: Long, val usage: Map<Gear, Long>, val meters: Double = 0.0,
+    val takenBackUp: Int = 0, val takenBackDown: Int = 0,
+)
 
 /**
  * Owns the ride in progress and the totals. A ride starts with the first gear report and ends
@@ -119,7 +122,7 @@ object Counter {
     }
 
     private fun publish(r: Ride) {
-        now.value = RideNow(r.start, r.rearShifts, r.frontShifts, r.ms, HashMap(r.usage), r.meters)
+        now.value = RideNow(r.start, r.rearShifts, r.frontShifts, r.ms, HashMap(r.usage), r.meters, r.takenBackUp, r.takenBackDown)
         if (System.currentTimeMillis() - lastSave > SAVE_EVERY_MS) save()
     }
 
