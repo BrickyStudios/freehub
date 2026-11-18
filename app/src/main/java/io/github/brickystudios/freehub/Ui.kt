@@ -62,6 +62,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import java.util.Locale
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 
 /** The app's language: null follows the phone (German phones get German, all others English). */
 object Lang {
@@ -166,17 +170,35 @@ fun BodyText(text: String, modifier: Modifier = Modifier, color: Color = P.ink, 
     style = TextStyle(fontFamily = Body, fontWeight = weight, fontSize = size, lineHeight = size * 1.35f, color = color, textAlign = align ?: TextAlign.Unspecified),
 )
 
+/** The big type. [tight] is for a number on a line of its own: see [capBox]. */
 @Composable
-fun Num(text: String, size: TextUnit, modifier: Modifier = Modifier, color: Color = P.ink, weight: FontWeight = FontWeight.ExtraBold) = Text(
-    text, modifier,
+fun Num(text: String, size: TextUnit, modifier: Modifier = Modifier, color: Color = P.ink, weight: FontWeight = FontWeight.ExtraBold, tight: Boolean = false) = Text(
+    text, if (tight) modifier.capBox(size) else modifier,
     style = TextStyle(fontFamily = Numerals, fontWeight = weight, fontSize = size, lineHeight = size * 0.95f, color = color, letterSpacing = (-0.01).em),
 )
+
+/**
+ * Boxes one line of numerals from just above cap height to just below the baseline. Saira reserves room for
+ * accents and descenders that digits never use (0.45 em above, 0.44 em below), which at 120 sp pushes a label a
+ * finger's width away from its number. A single line ignores a smaller lineHeight in Compose, so the measured
+ * box is cropped instead; the glyphs still draw in full.
+ */
+fun Modifier.capBox(size: TextUnit) = layout { m, c ->
+    val p = m.measure(c)
+    val base = p[FirstBaseline]
+    if (base == AlignmentLine.Unspecified) return@layout layout(p.width, p.height) { p.place(0, 0) }
+    val em = size.toPx()
+    val top = (base - em * 0.74f).roundToInt().coerceAtLeast(0) // Saira's cap height is 0.688 em
+    val bottom = (base + em * 0.06f).roundToInt().coerceAtMost(p.height)
+    layout(p.width, bottom - top) { p.place(0, -top) }
+}
 
 /** A value with its label underneath, the way a bike computer shows a field. */
 @Composable
 fun Field(value: String, label: String, modifier: Modifier = Modifier, size: TextUnit = 34.sp, color: Color = P.ink) {
     Column(modifier) {
-        Num(value, size, color = color, weight = FontWeight.Bold)
+        Num(value, size, color = color, weight = FontWeight.Bold, tight = true)
+        Spacer(Modifier.height(6.dp))
         Label(label)
     }
 }

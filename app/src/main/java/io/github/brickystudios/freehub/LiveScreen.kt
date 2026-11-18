@@ -53,7 +53,7 @@ fun LiveScreen(bike: Bike, profile: Profile?, paired: Boolean, bikes: List<Profi
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)) {
         StatusLine(bike, profile)
         if (bikes.size > 1 && !bike.demo) BikeChips(bikes, profile)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(36.dp))
         val g = bike.gears
         when {
             needsPermission -> Welcome(onAllow, onDemo)
@@ -132,6 +132,7 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
         BodyText("×", Modifier.padding(horizontal = 10.dp), color = P.faint, size = 48.sp)
         GearNumber(rear, g.rear, still, P.accent)
     }
+    Spacer(Modifier.height(14.dp))
     Label(
         tr("Vorne ${g.front ?: "–"}/${g.frontMax ?: "–"} · Hinten ${g.rear ?: "–"}/${g.rearMax ?: "–"}", "Front ${g.front ?: "–"}/${g.frontMax ?: "–"} · Rear ${g.rear ?: "–"}/${g.rearMax ?: "–"}"),
     )
@@ -145,7 +146,7 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
         Field(ratio?.let { "%.2f m".fmt(it * wheelMm / 1000f) } ?: "–", tr("Entfaltung", "Development"), Modifier.weight(1f))
         Field(modeShort(g.mode), tr("Schaltmodus", "Shift mode"), Modifier.weight(1f))
     }
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(20.dp))
     // labelled on purpose: a bare "100 %" in the corner reads as the phone's own battery
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         val low = (battery ?: 100) <= 20
@@ -187,7 +188,7 @@ private fun GearNumber(teeth: Int?, position: Int?, still: Boolean, color: andro
                 .togetherWith(slideOutVertically(tween(90)) { if (up) -it / 5 else it / 5 } + fadeOut(tween(60)))
         },
         label = "gear",
-    ) { (t, _) -> Num(t?.toString() ?: "–", 120.sp, color = color) }
+    ) { (t, _) -> Num(t?.toString() ?: "–", 120.sp, color = color, tight = true) }
 }
 
 /**

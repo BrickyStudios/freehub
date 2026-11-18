@@ -42,7 +42,9 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, bike
 
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 20.dp)) {
         Label(tr("Seit Beginn", "All time") + (bikeName?.let { " · $it" } ?: ""))
-        Num(count(shifts), 88.sp)
+        Spacer(Modifier.height(14.dp))
+        Num(count(shifts), 88.sp, tight = true)
+        Spacer(Modifier.height(12.dp))
         BodyText(
             tr("Schaltvorgänge in ${totals.rides.size + (if (ride != null) 1 else 0)} Fahrten · ${duration(ms)}", "shifts in ${totals.rides.size + (if (ride != null) 1 else 0)} rides · ${duration(ms)}"),
             color = P.muted,

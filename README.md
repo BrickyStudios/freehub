@@ -18,7 +18,7 @@
 
 Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it shows anything. Freehub connects to the rear derailleur over Bluetooth, reads what the derailleur already broadcasts to bike computers, and keeps every number on your phone.
 
-| ![Current gear as 50 × 19 with battery, range left and the bike’s total distance below](docs/bilder/1-live.png) | ![All-time shift count, distance by GPS and a heatmap of gear usage](docs/bilder/2-stats.png) | ![Battery, range left and drivetrain of the bike](docs/bilder/3-bike.png) | ![The crankset and cassette stored in the derailleur, and the shift quality: 0 of 2,448 rear shifts sprang back](docs/bilder/4-derailleur.png) |
+| ![Current gear as 50 × 17 with battery, range left and the bike’s total distance below](docs/bilder/1-live.png) | ![All-time shift count, distance by GPS and a heatmap of gear usage](docs/bilder/2-stats.png) | ![Battery, range left and drivetrain of the bike](docs/bilder/3-bike.png) | ![The crankset and cassette stored in the derailleur, and the shift quality: 0 of 2,448 rear shifts sprang back](docs/bilder/4-derailleur.png) |
 |---|---|---|---|
 
 ## What it shows
