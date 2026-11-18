@@ -30,7 +30,7 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 - **Where your time goes**: a heatmap of chainring × cog. Cross-chained combinations have an orange outline, and the share of time you spent in them is on top.
 - **Ratio and development** (metres per crank turn) for your tyre size.
 - **Shift mode** (manual, Synchro S1, S2), rear fine-tune level, firmware and serial number.
-- **What the derailleur has stored about itself**, read the way E-TUBE reads it: the crankset and cassette it was set up with, the shift mode and the charge left. Press the button on the back of the derailleur, tap Read, wait half a minute. If the derailleur was set up in E-TUBE, one tap takes its teeth over; if it never was, Freehub tells you that no teeth are stored.
+- **What the derailleur has stored about itself**, read the way E-TUBE reads it: the crankset and cassette it was set up with, the shift mode, the charge left and whether the error log has entries. Press the button on the back of the derailleur, tap Read, wait half a minute. If the derailleur was set up in E-TUBE, one tap takes its teeth over; if it never was, Freehub tells you that no teeth are stored.
 - **Shift quality.** A shift that goes one cog and springs straight back did not hold. Freehub counts those and, after 60 rear shifts, tells you whether the drivetrain catches cleanly or which way to try the fine-tune. It never changes the adjustment itself.
 - **D-Fly buttons**: press one of the extra buttons on the hoods and the app shows which channel arrived.
 - **A tick for every cog.** While the app is open, each shift gives a short buzz per cog, like the pawls of a freehub clicking over the ratchet. You can switch it off.
@@ -84,7 +84,7 @@ To read what the derailleur has stored, Freehub logs in to the E-TUBE service (`
 ## Planned
 
 - **Next:** confirm the shift-mode write on a bike, then offer it outside the developer options.
-- The error log and the Synchro map, once a capture from a derailleur that has them stored shows the reply format. Neither test bike had any.
+- What the error log entries mean. Freehub already shows whether the log has entries; the one test derailleur with entries had two, too few to decode. The Synchro map waits for a capture from a bike that uses synchronized shifting.
 - Gear usage history from the derailleur's memory: both test derailleurs answer "nothing stored", so this waits for one that logged it.
 
 ## Build

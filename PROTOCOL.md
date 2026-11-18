@@ -162,7 +162,7 @@ When the session is done, drop the link: the derailleur stays in command mode un
 
 ### The settings stream on 0x2AFD
 
-After `00 03 00` the derailleur sends one notification per stored setting, unasked, as `00 <group> <command> <p0 p1 p2 p3>` plus three bytes that change per session. `0xFF` in a parameter means "not stored". Group `0x0A` is the front derailleur, `0x0B` the rear, `0x20` common, `0x26` the battery, `0x40` radio, `0x4A` the clock.
+After `00 03 00` the derailleur sends one notification per stored setting, unasked, as `00 <group> <command> <p0 p1 p2 p3>`. Every notification is 10 bytes; whatever the record does not fill is left over from an earlier frame, so the tail means nothing. The stream is not complete every time: on the same bike one read brought `0B·18`, `0B·00` and `0B·20`, the next did not. Freehub keeps an earlier value where a later read is silent. `0xFF` in a parameter means "not stored". Group `0x0A` is the front derailleur, `0x0B` the rear, `0x20` common, `0x26` the battery, `0x40` radio, `0x4A` the clock.
 
 | group·cmd | meaning | example |
 |---|---|---|
@@ -180,7 +180,7 @@ After `00 03 00` the derailleur sends one notification per stored setting, unask
 
 The bike set up in E-TUBE stored `0A·B0 06 00` and `0B·B0 12 00`: exactly its 50/34 crankset and 11–34 cassette. The one never set up stores `ff ff` there and also reports `ff ff ff ff` as its patterns in `0x2AC1`, which is why Freehub lets the rider pick the teeth by hand.
 
-Not decoded yet: `0B·0C`, `0B·14`, `0B·44`, `0B·54`, `0B·6C`, `0B·7C`, `0A·10`, `01·B0`, `02·00`, `40·48`. The synchronised-shift map (group `0x32`, read separately with `00 13 32 ac …`) and the error log (`00 13 32 cc <index>`) answer only on a derailleur that has something stored there; neither has been captured with data so far.
+Not decoded yet: `0B·0C`, `0B·14`, `0B·44`, `0B·54`, `0B·6C`, `0B·7C`, `0A·10`, `01·B0`, `02·00`, `40·48`. **Error log:** `00 13 32 cc 00` (index 0) answers `33 32 cf …` on `0x2AF9` when the log is empty (the never-set-up RD-R7150). A derailleur with entries sends them as `32·CE` records (`00 32 ce 00 00 01 01`, `00 32 ce 01 09 00 00` from the bike set up in E-TUBE); Freehub shows whether there are entries, decoding them needs more captures. **Synchronised-shift map:** `00 13 32 ac 10 01 00 00` gets `33 32 af` (nothing) on a derailleur that runs manual front shifting; not captured with data so far. After the reads, `00 02 00 40` repeats on `0x2AFD` about every 0.75 s until the link drops.
 
 ### Gear usage history
 

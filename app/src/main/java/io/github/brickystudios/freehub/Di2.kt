@@ -428,9 +428,9 @@ object Di2 {
     private val memoryDone = Runnable {
         val cfg = Etube.parseConfig(memoryConfig)
         // keep it with the bike: reading needs the button on the derailleur, so the values should still be there later
-        if (!cfg.isEmpty) Garage.update { it.copy(config = cfg, configAt = System.currentTimeMillis()) }
+        if (!cfg.isEmpty) Garage.update { it.copy(config = cfg.over(it.config), configAt = System.currentTimeMillis()) }
         endMemory(when {
-            !cfg.isEmpty -> tr("Ausgelesen. Verbinde wieder …", "Read. Reconnecting …")
+            !cfg.isEmpty -> tr("Ausgelesen.", "Read.")
             memoryPackets > 0 -> tr("$memoryPackets Antworten, aber keine Einstellungen. Knopf am Schaltwerk gedrückt?", "$memoryPackets replies, but no settings. Did you press the button on the derailleur?")
             else -> tr("Angemeldet, aber das Schaltwerk hat nichts gesendet. Knopf am Schaltwerk gedrückt?", "Logged in, but the derailleur sent nothing. Did you press the button on the derailleur?")
         })
@@ -481,7 +481,8 @@ object Di2 {
             }
             Etube.PCE_RESPONSE, Etube.FREE_RESPONSE -> {
                 memoryPackets++
-                if (v.getOrNull(0)?.toInt() == 0x00 && v.size >= 5) memoryConfig.add(v) // a 2AFD config record
+                // a 2AFD config record, or a unit-command reply on 2AF9 (the error log answers there)
+                if ((v.getOrNull(0)?.toInt() == 0x00 || v.getOrNull(0)?.toInt() == 0x33) && v.size >= 5) memoryConfig.add(v)
                 Etube.replyHasData(v)?.let { if (memoryLastLabel.isNotEmpty()) memoryResults.add(memoryLastLabel to it) }
                 memory.value = tr("Empfange … $memoryPackets Antworten", "Receiving … $memoryPackets replies")
             }

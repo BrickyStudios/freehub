@@ -84,6 +84,35 @@ class EtubeTest {
         assertEquals(Etube.Config(), Etube.Config.fromJson(org.json.JSONObject(Etube.Config().toJson().toString())))
     }
 
+    @Test fun aPartialReadKeepsWhatAnEarlierOneKnew() {
+        // capture 12 (0.7.0, the never-set-up RD-R7150): whole 10-byte frames as they arrive, stale tails included.
+        // This read brought no 0b·18 / 0b·00, the error log answered "empty" on 2AF9.
+        val read12 = listOf(
+            "000b7c01ffffffb7f86f", "000a08ffffffffb7f86f", "000b080affffffb7f86f", "000a080202ffff00ffff",
+            "000a180102ffff00ffff", "000ab0ffffffff00ffff", "0026405affffff00ffff", "00261064ffffff00ffff",
+            "33012e430000ff7dc277", "3332af3b0000ff7dc277", "3332cf420000ff7dc277",
+        ).map { Etube.hex(it) }
+        val now = Etube.parseConfig(read12)
+        assertEquals(null, now.rearGears)
+        assertEquals(1 to 2, now.frontGears)
+        assertEquals(2, now.currentFrontGear)
+        assertEquals(10, now.currentRearGear)
+        assertEquals(90, now.capacityPercent)
+        assertEquals(false, now.errorsStored)
+        assertEquals(null, now.chainrings)
+
+        // an earlier, fuller read (capture 11) still supplies the rear range and the shift mode
+        val read11 = Etube.parseConfig(listOf("000b18010cfffff7f86f", "000b00000cfffff7f86f", "00264064000000f7f86f").map { Etube.hex(it) })
+        val kept = now.over(read11)
+        assertEquals(1 to 12, kept.rearGears)
+        assertEquals(true, kept.shiftModeManual)
+        assertEquals(90, kept.capacityPercent) // the newer reading wins where both have one
+        assertEquals(kept, Etube.Config.fromJson(org.json.JSONObject(kept.toJson().toString())))
+
+        // a derailleur with entries in its error log sends them as 32·ce (seen in the E-TUBE snoop)
+        assertEquals(true, Etube.parseConfig(listOf(Etube.hex("0032ce00000101"))).errorsStored)
+    }
+
     @Test fun sessionFlowHasDistinctLabels() {
         val steps = Etube.SESSION_FLOW
         assertTrue(steps.size >= 5)

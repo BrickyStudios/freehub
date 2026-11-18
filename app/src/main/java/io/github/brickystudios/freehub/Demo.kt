@@ -22,7 +22,7 @@ object Demo {
     fun config() = Etube.Config(
         rearGears = 1 to 12, frontGears = 1 to 2, shiftModeManual = false,
         currentRearGear = 7, currentFrontGear = 2, batteryPercent = 82, capacityPercent = 80,
-        ringPattern = 6, cogPattern = 18,
+        ringPattern = 6, cogPattern = 18, errorsStored = false,
     )
 
     /**

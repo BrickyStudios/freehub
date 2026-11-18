@@ -89,17 +89,29 @@ object Etube {
         /** the pattern numbers stored in the unit; null = never set up in E-TUBE, which is why the teeth stay empty */
         val ringPattern: Int? = null,
         val cogPattern: Int? = null,
+        /** the derailleur's error log: true = it holds entries, false = empty */
+        val errorsStored: Boolean? = null,
     ) {
         val chainrings get() = ringPattern?.let(Teeth::chainrings)
         val sprockets get() = cogPattern?.let(Teeth::sprockets)
         val isEmpty get() = this == Config()
+
+        /** A read does not always bring every record, so where this one is silent, keep what an earlier one knew. */
+        fun over(old: Config?) = if (old == null) this else Config(
+            rearGears = rearGears ?: old.rearGears, frontGears = frontGears ?: old.frontGears,
+            shiftModeManual = shiftModeManual ?: old.shiftModeManual,
+            currentRearGear = currentRearGear ?: old.currentRearGear, currentFrontGear = currentFrontGear ?: old.currentFrontGear,
+            batteryPercent = batteryPercent ?: old.batteryPercent, capacityPercent = capacityPercent ?: old.capacityPercent,
+            ringPattern = ringPattern ?: old.ringPattern, cogPattern = cogPattern ?: old.cogPattern,
+            errorsStored = errorsStored ?: old.errorsStored,
+        )
 
         fun toJson(): org.json.JSONObject = org.json.JSONObject()
             .put("rear", rearGears?.second).put("rearMin", rearGears?.first)
             .put("front", frontGears?.second).put("frontMin", frontGears?.first)
             .put("manual", shiftModeManual).put("gear", currentRearGear).put("ring", currentFrontGear)
             .put("battery", batteryPercent).put("capacity", capacityPercent)
-            .put("ringPattern", ringPattern).put("cogPattern", cogPattern)
+            .put("ringPattern", ringPattern).put("cogPattern", cogPattern).put("errors", errorsStored)
 
         companion object {
             fun fromJson(o: org.json.JSONObject): Config {
@@ -112,6 +124,7 @@ object Etube {
                     currentRearGear = int("gear"), currentFrontGear = int("ring"),
                     batteryPercent = int("battery"), capacityPercent = int("capacity"),
                     ringPattern = int("ringPattern"), cogPattern = int("cogPattern"),
+                    errorsStored = if (o.isNull("errors")) null else o.optBoolean("errors"),
                 )
             }
         }
@@ -123,6 +136,9 @@ object Etube {
      * own code; group `0x0A` is the front derailleur, `0x0B` the rear, `0x26` the battery. Checked against captures
      * from two real 2×12 bikes — one never set up in E-TUBE, one set up, whose stored patterns decode to the
      * crankset and cassette actually on it. `0xFF` means "not stored".
+     *
+     * Unit-command replies on 0x2AF9 (`33 <group> <command> …`) carry group and command at the same places, so
+     * they go in too: the error log answers `32·ce` with entries and `32·cf` when it is empty.
      */
     fun parseConfig(records: List<ByteArray>): Config {
         var c = Config()
@@ -142,6 +158,8 @@ object Etube {
                 0x2640 -> param(v, 0)?.let { if (it in 0..100) c = c.copy(capacityPercent = it) }
                 0x0AB0 -> pattern(v)?.let { if (Teeth.chainrings(it) != null) c = c.copy(ringPattern = it) }
                 0x0BB0 -> pattern(v)?.let { if (Teeth.sprockets(it) != null) c = c.copy(cogPattern = it) }
+                0x32CE -> c = c.copy(errorsStored = true)
+                0x32CF -> if (c.errorsStored == null) c = c.copy(errorsStored = false)
             }
         }
         return c

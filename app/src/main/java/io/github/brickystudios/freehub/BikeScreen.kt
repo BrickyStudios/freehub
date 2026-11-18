@@ -247,6 +247,7 @@ private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
                     cfg.rearGears?.let { "${cfg.frontGears?.second ?: "?"} × ${it.second}" },
                     cfg.shiftModeManual?.let { if (it) tr("Manuell", "Manual") else "Synchro" },
                     cfg.capacityPercent?.let { tr("Restkapazität $it %", "$it % capacity left") },
+                    cfg.errorsStored?.let { if (it) tr("Einträge im Fehlerspeicher", "entries in the error log") else tr("Fehlerspeicher leer", "error log empty") },
                     profile?.configAt?.takeIf { it > 0 && !bike.demo }?.let { tr("gelesen ", "read ") + when_.format(Date(it)) },
                 ).joinToString(" · ")
                 BodyText(rest, color = P.muted, size = 14.sp)
