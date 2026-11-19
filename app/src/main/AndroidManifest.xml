@@ -34,6 +34,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- firmware updates run in Shimano's E-TUBE: Freehub opens it, or its Play Store page when it is missing -->
+    <queries>
+        <package android:name="com.shimano.etubeprojectmobile.droid.phone" />
+    </queries>
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

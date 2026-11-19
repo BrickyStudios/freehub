@@ -71,6 +71,14 @@ fun LiveScreen(bike: Bike, profile: Profile?, paired: Boolean, bikes: List<Profi
                 Spacer(Modifier.height(16.dp))
                 PairList(onPaired)
             }
+            bike.link == Link.PAUSED -> {
+                val ctx = LocalContext.current
+                Hint(
+                    tr("Pause", "Paused"),
+                    tr("E-TUBE hat das Schaltwerk fürs Firmware-Update. Freehub verbindet sich danach von selbst wieder.", "E-TUBE has the derailleur for the firmware update. Freehub connects again on its own afterwards."),
+                    tr("Wieder verbinden", "Connect again"), { Di2.resume(ctx) }, null,
+                )
+            }
             g == null && bike.link != Link.CONNECTED -> Searching(onDemo)
             g == null -> Hint(tr("Verbunden", "Connected"), tr("Schalt einmal, dann schickt das Schaltwerk den Gang.", "Shift once and the derailleur sends the gear."), null, {}, null)
             else -> Cockpit(g, ride, wheelMm, bike.buttons, bike.battery, bike.battery?.let { Range.remainingKm(it, power) }, km)
@@ -103,6 +111,7 @@ private fun StatusLine(bike: Bike, profile: Profile?) {
         Link.SEARCHING -> P.faint to tr("Suche Schaltwerk", "Looking for derailleur")
         Link.NO_BLUETOOTH -> P.warn to tr("Bluetooth aus", "Bluetooth off")
         Link.OFF -> P.faint to tr("Nicht verbunden", "Not connected")
+        Link.PAUSED -> P.muted to tr("Pause fürs Firmware-Update", "Paused for a firmware update")
     }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Dot(color)

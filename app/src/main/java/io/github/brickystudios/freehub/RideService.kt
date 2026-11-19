@@ -120,7 +120,7 @@ class RideService : Service() {
 
         /** The derailleur woke up while Freehub was closed. */
         fun wake(c: Context) {
-            if (!MainActivity.hasPermissions(c) || Di2.bike.value.demo) return
+            if (!MainActivity.hasPermissions(c) || Di2.bike.value.demo || Di2.paused(c)) return
             runCatching { ContextCompat.startForegroundService(c, Intent(c, RideService::class.java).setAction(AUTO)) }
                 .onFailure { Log.w("Freehub", "auto start refused", it) }
         }

@@ -308,6 +308,9 @@ object Prefs {
     /** developer options: Bluetooth capture, read all, read memory */
     fun dev(c: Context) = p(c).getBoolean("dev", false)
     fun setDev(c: Context, on: Boolean) = p(c).edit().putBoolean("dev", on).apply()
+    /** until when Freehub keeps off the derailleur so E-TUBE can update its firmware; 0 = not paused */
+    fun pausedUntil(c: Context) = p(c).getLong("paused", 0L)
+    fun setPausedUntil(c: Context, at: Long) = p(c).edit().putLong("paused", at).apply()
     fun updates(c: Context) = p(c).getBoolean("updates", true)
     fun setUpdates(c: Context, on: Boolean) = p(c).edit().putBoolean("updates", on).apply()
 

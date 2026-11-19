@@ -190,6 +190,22 @@ E-TUBE's gear usage request is `00 13 33 04 00 01 01` (group `0x33`, command `0x
 
 Freehub never writes to the derailleur. A shift-mode write was tried and dropped: `00 13 0b f8 00 00` answers `33 0b fb`, the "no" reply (`0xF8 | 3`), and the mode does not change. E-TUBE never writes a mode in the snoop either. On 12-speed Di2 the rider switches modes at the bike: two presses on the button of the rear derailleur step manual → S1 → S2, and its LED shows the mode (blue for 2 s = manual, 2 blinks = S1, 3 blinks = S2). Skipped on purpose: fine-tune, button mapping, teeth patterns, SHIMANO ID, the firmware service `0x18FE`, and the e-bike groups (`16`, `17`, `38`, `39`).
 
+### Firmware versions
+
+The derailleur reports its firmware as a string in `0x2A26` (`4.1.0.0` on both test derailleurs). Freehub compares it with a list of Shimano's releases that ships with the app (`Firmware.kt`, taken from Shimano's firmware page) and says what is newer. It does not install anything: firmware goes on through E-TUBE PROJECT Cyclist, and Freehub stays off the derailleur meanwhile so the two apps don't fight over the link.
+
+What the releases since 4.1.0 mean for Freehub, as far as Shimano's notes say:
+
+| Version | Date | Note | For Freehub |
+|---|---|---|---|
+| 4.2.0 / 4.2.1 | May 2024 | FRONT SHIFT NEXT button function | a button mapping, nothing new on the wire Freehub reads |
+| 4.2.3 | Aug 2024 | wireless link between levers and derailleur secured; levers need 4.2.x too, wired only | lever ↔ derailleur radio, not the Bluetooth LE side |
+| 4.3.0 | May 2025 | MULTI PURPOSE channels | none known |
+| 4.3.1 | Dec 2025 | E-TUBE needs 5.4.4 or newer to connect | Freehub's E-TUBE handshake comes from E-TUBE 5.4.6, so it should still log in; not yet checked on a derailleur with 4.3.1 or later |
+| 4.4.0 | Aug 2026 | pairing only with matching levers and derailleurs | lever pairing, not the phone |
+
+The gear, battery and button reports (`0x18EF`) are the ones bike computers use, so Shimano has reason to keep them stable. A capture from a derailleur on 4.3.1 or newer would settle the rest.
+
 ## How this was worked out
 
 A GATT scan of a real RD-R7150 with nRF Connect, reading how Shimano's own apps parse the data (E-TUBE RIDE 2.0.13, E-TUBE PROJECT Cyclist 5.4.6), and an Android Bluetooth HCI snoop of E-TUBE PROJECT talking to a derailleur the author's family owns, for the sole purpose of interoperability with a component the author owns (§ 69e UrhG, Art. 6 of Directive 2009/24/EC). No Shimano code is part of this repository. Earlier work: [BikeBridge](https://codeberg.org/bg443/BikeBridge) (e-bike side of the E-TUBE service) and [shimano-di2-media-controls](https://github.com/NitorCreations/shimano-di2-media-controls) (D-Fly buttons).

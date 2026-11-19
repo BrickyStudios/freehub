@@ -50,10 +50,13 @@ fun BikeScreen(
             when {
                 bike.demo -> tr("erfundene Fahrt", "made-up ride")
                 bike.link == Link.CONNECTED -> tr("verbunden", "connected")
+                bike.link == Link.PAUSED -> tr("Pause fürs Firmware-Update bis ", "paused for a firmware update until ") +
+                    DateFormat.getTimeInstance(DateFormat.SHORT, locale()).format(Date(Prefs.pausedUntil(ctx)))
                 else -> tr("nicht verbunden", "not connected")
             },
             color = if (bike.link == Link.CONNECTED) P.accent else P.muted, size = 15.sp,
         )
+        if (bike.link == Link.PAUSED) Action(tr("Wieder verbinden", "Connect again"), Modifier.padding(top = 12.dp), primary = false) { Di2.resume(ctx) }
         if (!bike.demo && profile != null) BikePhoto(profile.key)
         Spacer(Modifier.height(16.dp))
         val last = power.lastOrNull()
@@ -63,6 +66,7 @@ fun BikeScreen(
             Field(level?.let { approxKm(Range.remainingKm(it, power)) } ?: "–", tr("Reicht noch", "Range left"), Modifier.weight(1f))
             Field(bike.firmware ?: "–", "Firmware", Modifier.weight(1f))
         }
+        FirmwareUpdate(bike, bike.name ?: profile?.model)
 
         if (!bike.demo) GarageSection(bike, profile, bikes, onPaired, onRemove)
 
@@ -405,6 +409,7 @@ internal fun BikeState(b: Profile, chosen: Boolean, bike: Bike) {
     val (text, color) = when {
         b.address == bike.address && bike.link == Link.CONNECTED -> tr("verbunden", "connected") to P.accent
         chosen && bike.link == Link.CONNECTING -> tr("verbinde …", "connecting …") to P.muted
+        chosen && bike.link == Link.PAUSED -> tr("Pause fürs Update", "paused for the update") to P.muted
         chosen -> tr("gewählt · wird gesucht", "chosen · looking") to P.muted
         else -> return
     }

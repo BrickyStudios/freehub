@@ -24,7 +24,8 @@ import android.os.ParcelUuid
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
-enum class Link { OFF, NO_BLUETOOTH, SEARCHING, CONNECTING, CONNECTED }
+/** PAUSED: the rider handed the derailleur to E-TUBE for a firmware update, Freehub keeps off it */
+enum class Link { OFF, NO_BLUETOOTH, SEARCHING, CONNECTING, CONNECTED, PAUSED }
 
 /** A derailleur seen while pairing: not connected, only heard. rssi in dBm, higher = closer. */
 data class Nearby(val address: String, val name: String?, val rssi: Int, val at: Long)
@@ -71,9 +72,29 @@ object Di2 {
             bike.update { it.copy(link = Link.OFF) }
             return
         }
+        if (paused(app)) {
+            bike.update { it.copy(link = Link.PAUSED) }
+            return
+        }
         wanted = true
         if (gatt == null && !scanning) scan()
     }
+
+    /** A firmware update needs the derailleur to itself: let go, and stay off it until [ms] have passed or [resume]. */
+    fun pause(ctx: Context, ms: Long) {
+        app = ctx.applicationContext
+        Prefs.setPausedUntil(app, System.currentTimeMillis() + ms)
+        stop()
+        bike.update { it.copy(link = Link.PAUSED) }
+        main.postDelayed({ if (MainActivity.visible) start(app) }, ms)
+    }
+
+    fun resume(ctx: Context) {
+        Prefs.setPausedUntil(ctx, 0L)
+        start(ctx)
+    }
+
+    fun paused(ctx: Context) = System.currentTimeMillis() < Prefs.pausedUntil(ctx)
 
     /** the derailleur Freehub is connected to, if any */
     val connectedAddress: String? get() = gatt?.device?.address
