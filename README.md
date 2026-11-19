@@ -95,6 +95,8 @@ JAVA_HOME=/path/to/jdk-17 ./gradlew testDebugUnitTest assembleDebug
 
 The unit tests cover the protocol parsing, the settings stream and the shift counting, with byte strings from two real RD-R7150.
 
+The screenshots come from demo mode: with the app installed on a 1080×2400 emulator, `tools/screens.sh` retakes all 17 in both languages and themes, and `node tools/bilder.mjs` (needs Playwright) renders the README images from them.
+
 ## Credits
 
 - [BikeBridge](https://codeberg.org/bg443/BikeBridge) (GPL-3.0) worked out the E-TUBE service and its login for Shimano e-bike motors; Freehub uses its handshake and keys.
