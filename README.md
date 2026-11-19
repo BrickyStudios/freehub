@@ -24,12 +24,13 @@ Shimano's E-TUBE PROJECT app asks you to sign in with a SHIMANO ID before it sho
 ## What it shows
 
 - **The gear you are in**, as teeth (50 × 17) and as positions (front 2/2, rear 7/12). The app reads chainrings and cassette from the derailleur. If it reports a pattern the app does not know, or the wrong one, pick yours under Bike → Drivetrain.
-- **Battery** of the Di2 system in percent, with the **range left in km** and when you last charged. The range starts from Shimano's figure (about 1,000 km per charge) and learns your real consumption from the distance Freehub measures.
+- **Battery** of the Di2 system in percent, with the **range left in km** and when you last charged. The range starts from Shimano's figure (about 1,000 km per charge) and learns your real consumption from the distance Freehub measures. At 20 % and again at 10 % a notification tells you how far it still goes, because a flat Di2 stops shifting.
 - **Distance by GPS**, per ride and in total. The derailleur measures none, so Freehub uses the phone's own GPS while it counts a ride (no Google services needed). Only the distance is stored, never the route.
 - **Every shift, counted.** A multi-shift across three cogs counts as three. Per ride and all time, rear and front apart, plus shifts per hour.
 - **Where your time goes**: a heatmap of chainring × cog. Cross-chained combinations have an orange outline, and the share of time you spent in them is on top.
 - **Ratio and development** (metres per crank turn) for your tyre size.
-- **Shift mode** (manual, Synchro S1, S2), rear fine-tune level, firmware and serial number.
+- **Shift mode** in plain words: manual, S1 (semi-synchro at the factory setting: shift the front and the rear follows) or S2 (synchro: shift the rear only, the front follows). Two presses on the button of the rear derailleur switch to the next one; Freehub says so next to the mode. Also the rear fine-tune level, firmware and serial number.
+- **A photo of your bike** at the top of the Bike tab, picked from your gallery. It stays on the phone.
 - **What the derailleur has stored about itself**, read the way E-TUBE reads it: the crankset and cassette it was set up with, the shift mode, the charge left and whether the error log has entries. Press the button on the back of the derailleur, tap Read, wait half a minute. If the derailleur was set up in E-TUBE, one tap takes its teeth over; if it never was, Freehub tells you that no teeth are stored.
 - **Shift quality.** A shift that goes one cog and springs straight back did not hold. Freehub counts those and, after 60 rear shifts, tells you whether the drivetrain catches cleanly or which way to try the fine-tune. It never changes the adjustment itself.
 - **D-Fly buttons**: press one of the extra buttons on the hoods and the app shows which channel arrived.
@@ -83,7 +84,6 @@ To read what the derailleur has stored, Freehub logs in to the E-TUBE service (`
 
 ## Planned
 
-- **Next:** confirm the shift-mode write on a bike, then offer it outside the developer options.
 - What the error log entries mean. Freehub already shows whether the log has entries; the one test derailleur with entries had two, too few to decode. The Synchro map waits for a capture from a bike that uses synchronized shifting.
 - Gear usage history from the derailleur's memory: both test derailleurs answer "nothing stored", so this waits for one that logged it.
 

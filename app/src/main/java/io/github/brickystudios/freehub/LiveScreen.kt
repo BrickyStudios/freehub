@@ -144,7 +144,7 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Field(ratio?.let { "%.2f".fmt(it) } ?: "–", tr("Übersetzung", "Ratio"), Modifier.weight(1f))
         Field(ratio?.let { "%.2f m".fmt(it * wheelMm / 1000f) } ?: "–", tr("Entfaltung", "Development"), Modifier.weight(1f))
-        Field(modeShort(g.mode), tr("Schaltmodus", "Shift mode"), Modifier.weight(1f))
+        Field(modeShort(g.mode), modeLabel(g.mode), Modifier.weight(1f))
     }
     Spacer(Modifier.height(20.dp))
     // labelled on purpose: a bare "100 %" in the corner reads as the phone's own battery
@@ -313,10 +313,11 @@ private fun Hint(title: String, text: String, action: String?, onAction: () -> U
     }
 }
 
+// S1 and S2 are slots the rider fills in E-TUBE; these names are Shimano's factory setting, which almost nobody changes
 fun modeName(m: ShiftMode) = when (m) {
     ShiftMode.MANUAL -> tr("Manuell", "Manual")
-    ShiftMode.SYNCHRO_S1 -> "Synchro S1"
-    ShiftMode.SYNCHRO_S2 -> "Synchro S2"
+    ShiftMode.SYNCHRO_S1 -> tr("S1 · Halb-Synchro", "S1 · semi-synchro")
+    ShiftMode.SYNCHRO_S2 -> tr("S2 · Synchro", "S2 · synchro")
     ShiftMode.ADJUST -> tr("Justieren", "Adjust")
     ShiftMode.AUTO -> "Auto"
     ShiftMode.AUTO2 -> "Auto 2"
@@ -330,6 +331,25 @@ fun modeShort(m: ShiftMode) = when (m) {
     ShiftMode.SYNCHRO_S1 -> "S1"
     ShiftMode.SYNCHRO_S2 -> "S2"
     else -> modeName(m)
+}
+
+/** the label under [modeShort]: what an S1 or S2 does at the factory setting */
+fun modeLabel(m: ShiftMode) = when (m) {
+    ShiftMode.SYNCHRO_S1 -> tr("Halb-Synchro", "Semi-synchro")
+    ShiftMode.SYNCHRO_S2 -> "Synchro"
+    else -> tr("Schaltmodus", "Shift mode")
+}
+
+/** What the mode does for the rider, and how to get to the next one: Di2 switches modes at the derailleur. */
+fun modeHow(m: ShiftMode?): String {
+    val what = when (m) {
+        ShiftMode.MANUAL -> tr("Du schaltest vorne und hinten selbst.", "You shift front and rear yourself.")
+        ShiftMode.SYNCHRO_S1 -> tr("Schaltest du vorne, springt hinten 1–2 Gänge mit.", "Shift the front and the rear moves 1–2 gears with it.")
+        ShiftMode.SYNCHRO_S2 -> tr("Du schaltest nur hinten, vorne schaltet von selbst.", "You shift the rear only, the front follows by itself.")
+        else -> null
+    }
+    val how = tr("Wechseln: Knopf am Schaltwerk 2× drücken.", "To switch: press the button on the derailleur twice.")
+    return listOfNotNull(what, how).joinToString(" ")
 }
 
 fun shiftsWord(n: Long) = if (n == 1L) tr("Schaltvorgang", "shift") else tr("Schaltvorgänge", "shifts")

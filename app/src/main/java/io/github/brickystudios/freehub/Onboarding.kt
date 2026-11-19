@@ -153,9 +153,10 @@ fun Onboarding(
             Step.DONE -> tr("Freehub öffnen", "Open Freehub") to onDone
             else -> tr("Weiter", "Next") to { next() }
         }
-        Action(button.first, Modifier.fillMaxWidth(), onClick = button.second)
-        // where the main button already says "later", a second skip button would do the same thing
+        // where the main button already says "later", a second skip button would do the same thing; and it stays
+        // quiet, so the derailleur in the list is the thing to tap
         val waiting = step == Step.CONNECT && bike.link != Link.CONNECTED && bike.link != Link.NO_BLUETOOTH
+        Action(button.first, Modifier.fillMaxWidth(), primary = !waiting, onClick = button.second)
         if (step !in setOf(Step.WELCOME, Step.DONE) && !waiting) {
             Spacer(Modifier.height(10.dp))
             Action(tr("Überspringen", "Skip"), Modifier.fillMaxWidth(), primary = false) { next() }

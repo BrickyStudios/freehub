@@ -386,15 +386,6 @@ object Di2 {
         login("config read: login with E-TUBE handshake") { sweepProbe(0) }
     }
 
-    /**
-     * Developer options: log in, open the session, then set the shift mode (manual vs synchronized).
-     * A write — it changes the derailleur, so it only runs when the rider taps it. Reversible with the shifter.
-     */
-    fun setShiftMode(manual: Boolean) {
-        memorySweep = Etube.SESSION_FLOW + Triple("set shift mode ${if (manual) "manual" else "synchronized"}", Etube.PCE_COMMAND, Etube.setShiftMode(manual))
-        login("set shift mode: ${if (manual) "manual" else "synchronized"}") { sweepProbe(0) }
-    }
-
     private fun login(note: String, action: () -> Unit) {
         if (gatt == null || bike.value.link != Link.CONNECTED || memoryPending) return
         DevLog.on = true
@@ -539,6 +530,7 @@ object Di2 {
                 val level = b.toInt() and 0xFF
                 bike.update { it.copy(battery = level) }
                 Power.record(level, Counter.km())
+                if (!bike.value.demo) Power.warnIfLow(app, level)
             }
             Sbi.FIRMWARE -> bike.update { it.copy(firmware = v.decodeToString().trim()) }
             Sbi.SERIAL -> bike.update { it.copy(serial = v.decodeToString().trim()) }

@@ -54,6 +54,7 @@ fun BikeScreen(
             },
             color = if (bike.link == Link.CONNECTED) P.accent else P.muted, size = 15.sp,
         )
+        if (!bike.demo && profile != null) BikePhoto(profile.key)
         Spacer(Modifier.height(16.dp))
         val last = power.lastOrNull()
         val level = bike.battery ?: last?.percent
@@ -87,11 +88,14 @@ fun BikeScreen(
         Spacer(Modifier.height(4.dp))
         Info(tr("Seriennummer", "Serial number"), bike.serial ?: "–")
         if (profile != null || bike.demo) DrivetrainPicker(bike, gears) // per bike: nothing to save it to before pairing
-        Info(tr("Schaltmodus", "Shift mode"), gears?.let { modeName(it.mode) } ?: "–")
-        Info(tr("Multi-Shift-Intervall", "Multi-shift interval"), gears?.multiShiftInterval?.toString() ?: "–")
+        SettingRow(tr("Schaltmodus", "Shift mode"), modeHow(gears?.mode)) {
+            BodyText(gears?.let { modeName(it.mode) } ?: "–", weight = FontWeight.SemiBold)
+        }
+        Divider()
+        gears?.multiShiftInterval?.let { Info(tr("Multi-Shift-Intervall", "Multi-shift interval"), it.toString()) }
         Info(
             tr("Feinjustierung hinten", "Rear fine-tune"),
-            gears?.rearAdjust?.let { a -> (if (a == 0) "0" else "%+d".fmt(a)) + (if (gears.rearAdjustMin != null && gears.rearAdjustMax != null) "  (${gears.rearAdjustMin} … +${gears.rearAdjustMax})" else "") } ?: "–",
+            gears?.rearAdjust?.let { a -> signed(a) + (if (gears.rearAdjustMin != null && gears.rearAdjustMax != null) "  (${signed(gears.rearAdjustMin)} … ${signed(gears.rearAdjustMax)})" else "") } ?: "–",
         )
         val raw = remember(bike.link) { Prefs.rawGears(ctx) }
         if (raw != null && !bike.demo) {
@@ -182,7 +186,7 @@ fun BikeScreen(
         ) { Toggle(dev) }
         if (dev) Developer(bike)
         Divider()
-        SettingRow(tr("Einrichtung noch einmal", "Run the setup again"), tr("Bluetooth, Antrieb, Auto-Start, Strava", "Bluetooth, drivetrain, auto start, Strava"), onClick = onSetup)
+        SettingRow(tr("Einrichtung noch einmal", "Run the setup again"), tr("Bluetooth, Rad koppeln, Antrieb, Auto-Start, Kilometer", "Bluetooth, pairing, drivetrain, auto start, distance"), onClick = onSetup)
         Divider()
         SettingRow(tr("Quellcode und Protokoll", "Source code and protocol"), "github.com/BrickyStudios/freehub", onClick = {
             ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/BrickyStudios/freehub")))
@@ -245,7 +249,7 @@ private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
                 Spacer(Modifier.height(10.dp))
                 val rest = listOfNotNull(
                     cfg.rearGears?.let { "${cfg.frontGears?.second ?: "?"} × ${it.second}" },
-                    cfg.shiftModeManual?.let { if (it) tr("Manuell", "Manual") else "Synchro" },
+                    cfg.shiftMode?.let { modeName(ShiftMode.of(it)) },
                     cfg.capacityPercent?.let { tr("Restkapazität $it %", "$it % capacity left") },
                     cfg.errorsStored?.let { if (it) tr("Einträge im Fehlerspeicher", "entries in the error log") else tr("Fehlerspeicher leer", "error log empty") },
                     profile?.configAt?.takeIf { it > 0 && !bike.demo }?.let { tr("gelesen ", "read ") + when_.format(Date(it)) },
@@ -323,24 +327,30 @@ internal fun DrivetrainPicker(bike: Bike, gears: Gears?) {
     val active by Garage.active.collectAsStateWithLifecycle()
     var rings by remember(active) { mutableIntStateOf(Prefs.rings(ctx)) }
     var cogs by remember(active) { mutableIntStateOf(Prefs.cogs(ctx)) }
-    fun note(picked: Boolean) = if (picked) tr("von Hand gewählt · tippen zum Wechseln", "picked by hand · tap to change")
-    else tr("vom Schaltwerk · tippen, falls falsch", "from the derailleur · tap if wrong")
+    fun note(picked: Boolean, known: Boolean) = when {
+        picked -> tr("von Hand gewählt · tippen zum Wechseln", "picked by hand · tap to change")
+        known -> tr("vom Schaltwerk · tippen, falls falsch", "from the derailleur · tap if wrong")
+        else -> tr("tippen, bis deine erscheint", "tap until yours shows")
+    }
     // -1 first: back to what the derailleur says
     val ringChoices = listOf(-1) + Teeth.ringPatterns(reported?.frontMax ?: 2)
     val cogChoices = listOf(-1) + Teeth.cogPatterns(reported?.rearMax ?: 12)
-    SettingRow(tr("Kurbel", "Crankset"), note(rings >= 0), onClick = {
+    SettingRow(tr("Kurbel", "Crankset"), note(rings >= 0, reported?.chainrings != null), onClick = {
         rings = ringChoices[(ringChoices.indexOf(rings) + 1) % ringChoices.size]
         Prefs.setRings(ctx, rings)
         Di2.repick()
     }) { BodyText((Teeth.chainrings(rings) ?: reported?.chainrings)?.joinToString("/") ?: tr("unbekannt", "unknown"), weight = FontWeight.SemiBold) }
     Divider()
-    SettingRow(tr("Kassette", "Cassette"), note(cogs >= 0), onClick = {
+    SettingRow(tr("Kassette", "Cassette"), note(cogs >= 0, reported?.sprockets != null), onClick = {
         cogs = cogChoices[(cogChoices.indexOf(cogs) + 1) % cogChoices.size]
         Prefs.setCogs(ctx, cogs)
         Di2.repick()
     }) { BodyText((Teeth.sprockets(cogs) ?: reported?.sprockets)?.let(::cassette) ?: tr("unbekannt", "unknown"), weight = FontWeight.SemiBold) }
     Divider()
 }
+
+/** −8, 0, +8 with a real minus sign */
+private fun signed(n: Int) = if (n == 0) "0" else "%+d".fmt(n).replace('-', '−')
 
 private fun cassette(t: List<Int>) = "${t.first()}–${t.last()} · ${t.size}-" + tr("fach", "speed")
 
@@ -401,7 +411,7 @@ internal fun BikeState(b: Profile, chosen: Boolean, bike: Bike) {
     BodyText(text, color = color, weight = FontWeight.SemiBold, size = 14.sp)
 }
 
-/** Developer options: share the capture, read every value, try the derailleur's own memory. */
+/** Developer options: share the capture, read every value. */
 @Composable
 private fun Developer(bike: Bike) {
     val ctx = LocalContext.current
@@ -422,19 +432,6 @@ private fun Developer(bike: Bike) {
             }
             Spacer(Modifier.height(10.dp))
             Action(tr("Alle Werte lesen", "Read all values"), Modifier.fillMaxWidth(), primary = false) { if (connected) Di2.readAll() }
-            Spacer(Modifier.height(16.dp))
-            Label(tr("Schaltmodus schreiben (Test)", "Write shift mode (test)"))
-            Spacer(Modifier.height(6.dp))
-            BodyText(
-                tr("Ändert das Schaltwerk: Vorderumwerfer manuell oder synchronisiert. Reversibel über die Modus-Taste am Lenker. Noch nicht am Rad bestätigt.",
-                   "Changes the derailleur: front shifting manual or synchronized. Reversible with the mode button on the bar. Not yet confirmed on a bike."),
-                color = P.muted, size = 14.sp,
-            )
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Action(tr("Manuell", "Manual"), Modifier.weight(1f), primary = false) { if (connected) Di2.setShiftMode(true) }
-                Action(tr("Synchro", "Synchro"), Modifier.weight(1f), primary = false) { if (connected) Di2.setShiftMode(false) }
-            }
         }
     }
 }

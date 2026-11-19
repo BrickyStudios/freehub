@@ -20,7 +20,7 @@ object Demo {
 
     /** What the made-up derailleur has stored, so Bike shows a full "stored in the derailleur" section. */
     fun config() = Etube.Config(
-        rearGears = 1 to 12, frontGears = 1 to 2, shiftModeManual = false,
+        rearGears = 1 to 12, frontGears = 1 to 2, shiftMode = ShiftMode.SYNCHRO_S1.code,
         currentRearGear = 7, currentFrontGear = 2, batteryPercent = 82, capacityPercent = 80,
         ringPattern = 6, cogPattern = 18, errorsStored = false,
     )

@@ -64,9 +64,22 @@ object Power {
     val log = MutableStateFlow<List<Charge>>(emptyList())
     /** this bike's battery log; null while no bike is paired */
     private var file: File? = null
+    private var key: String? = null
+
+    /** A Di2 with a flat battery stops shifting, so the rider hears about it at 20 % and again at 10 %. */
+    fun warnIfLow(ctx: Context, percent: Int) {
+        val k = key ?: return
+        val prefs = ctx.getSharedPreferences("prefs", Context.MODE_PRIVATE)
+        val warned = prefs.getInt("warned-$k", 0)
+        if (percent >= LowBattery.REARM) { if (warned != 0) prefs.edit().putInt("warned-$k", 0).apply(); return }
+        val at = LowBattery.due(percent, warned) ?: return
+        prefs.edit().putInt("warned-$k", at).apply()
+        LowBattery.notify(ctx, percent, Range.remainingKm(percent, log.value))
+    }
 
     /** Switches to a bike's battery log (see [Garage]). */
     fun open(ctx: Context, key: String?) {
+        this.key = key
         file = key?.let { File(ctx.filesDir, "battery-$it.json") }
         log.value = file?.let { f -> runCatching { Range.fromJson(f.readText()) }.getOrNull() } ?: emptyList()
     }
@@ -81,5 +94,33 @@ object Power {
         val tmp = File(f.path + ".tmp")
         tmp.writeText(Range.toJson(log.value))
         tmp.renameTo(f)
+    }
+}
+
+/** The low-battery warning: when it is due (pure, for the JVM tests) and the notification itself. */
+object LowBattery {
+    private val STEPS = listOf(10, 20)
+    /** charged back to here, the warnings start over */
+    const val REARM = 30
+    private const val CHANNEL = "battery"
+
+    /** The step to warn at now, or null. [warned] = the last step warned at since the last charge, 0 for none. */
+    fun due(percent: Int, warned: Int): Int? = STEPS.firstOrNull { percent <= it && (warned == 0 || it < warned) }
+
+    fun notify(ctx: Context, percent: Int, km: Double) {
+        val nm = ctx.getSystemService(android.app.NotificationManager::class.java)
+        if (!nm.areNotificationsEnabled()) return
+        nm.createNotificationChannel(android.app.NotificationChannel(CHANNEL, tr("Di2-Akku", "Di2 battery"), android.app.NotificationManager.IMPORTANCE_DEFAULT))
+        val open = android.app.PendingIntent.getActivity(ctx, 2, android.content.Intent(ctx, MainActivity::class.java), android.app.PendingIntent.FLAG_IMMUTABLE)
+        nm.notify(
+            3,
+            android.app.Notification.Builder(ctx, CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat)
+                .setContentTitle(tr("Di2-Akku bei $percent %", "Di2 battery at $percent %"))
+                .setContentText(tr("Reicht noch ${approxKm(km)}. Bald laden, sonst schaltet nichts mehr.", "Good for ${approxKm(km)} more. Charge soon, or nothing shifts."))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build(),
+        )
     }
 }

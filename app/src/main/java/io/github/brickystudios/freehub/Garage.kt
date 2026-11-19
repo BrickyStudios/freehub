@@ -148,6 +148,7 @@ object Garage {
         save()
         openData(ctx)
         listOf("stats", "battery").forEach { File(ctx.filesDir, "$it-${p.key}.json").delete() }
+        BikePhotos.file(ctx, p.key).delete()
     }
 
     private fun openData(ctx: Context) {

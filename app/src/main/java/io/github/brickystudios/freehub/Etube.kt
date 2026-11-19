@@ -50,9 +50,6 @@ object Etube {
     /** A unit command: control 0x13, then group, command, params. Reply `33 <group> <command|2 = data / |3 = NAK>`. */
     fun unitCommand(group: Int, command: Int, vararg params: Int): ByteArray = ble(0x13, group, command, *params)
 
-    /** Set the shift mode (group 0x0B, command 0xF8): 1 = manual front shifting, 0 = synchronized. A write. */
-    fun setShiftMode(manual: Boolean) = unitCommand(0x0B, 0xF8, if (manual) 1 else 0, 0)
-
     /**
      * The exact session E-TUBE runs after login, read byte-for-byte from an E-TUBE Bluetooth HCI snoop: command
      * mode, a `00 05` on 2AFA, an id read, two writes on 2AF5, a firmware read, then `setProtocolMode` (`00 03 00`).
@@ -80,7 +77,8 @@ object Etube {
     data class Config(
         val rearGears: Pair<Int, Int>? = null,  // min..max, e.g. 1..12
         val frontGears: Pair<Int, Int>? = null,  // 1..2 on a double
-        val shiftModeManual: Boolean? = null,    // true = manual front shift, false = synchronized
+        /** the shift mode the derailleur is in, same codes as byte 1 of 0x2AC1: 0 manual, 5 S1, 6 S2 */
+        val shiftMode: Int? = null,
         val currentRearGear: Int? = null,
         val currentFrontGear: Int? = null,
         val batteryPercent: Int? = null,
@@ -99,7 +97,7 @@ object Etube {
         /** A read does not always bring every record, so where this one is silent, keep what an earlier one knew. */
         fun over(old: Config?) = if (old == null) this else Config(
             rearGears = rearGears ?: old.rearGears, frontGears = frontGears ?: old.frontGears,
-            shiftModeManual = shiftModeManual ?: old.shiftModeManual,
+            shiftMode = shiftMode ?: old.shiftMode,
             currentRearGear = currentRearGear ?: old.currentRearGear, currentFrontGear = currentFrontGear ?: old.currentFrontGear,
             batteryPercent = batteryPercent ?: old.batteryPercent, capacityPercent = capacityPercent ?: old.capacityPercent,
             ringPattern = ringPattern ?: old.ringPattern, cogPattern = cogPattern ?: old.cogPattern,
@@ -109,7 +107,7 @@ object Etube {
         fun toJson(): org.json.JSONObject = org.json.JSONObject()
             .put("rear", rearGears?.second).put("rearMin", rearGears?.first)
             .put("front", frontGears?.second).put("frontMin", frontGears?.first)
-            .put("manual", shiftModeManual).put("gear", currentRearGear).put("ring", currentFrontGear)
+            .put("mode", shiftMode).put("gear", currentRearGear).put("ring", currentFrontGear)
             .put("battery", batteryPercent).put("capacity", capacityPercent)
             .put("ringPattern", ringPattern).put("cogPattern", cogPattern).put("errors", errorsStored)
 
@@ -120,7 +118,8 @@ object Etube {
                 return Config(
                     rearGears = pair("rearMin", "rear"),
                     frontGears = pair("frontMin", "front"),
-                    shiftModeManual = if (o.isNull("manual")) null else o.optBoolean("manual"),
+                    // before 0.8 only "manual" was kept; true is mode 0, false could have been S1 or S2
+                    shiftMode = int("mode") ?: if (o.optBoolean("manual")) 0 else null,
                     currentRearGear = int("gear"), currentFrontGear = int("ring"),
                     batteryPercent = int("battery"), capacityPercent = int("capacity"),
                     ringPattern = int("ringPattern"), cogPattern = int("cogPattern"),
@@ -151,7 +150,7 @@ object Etube {
             when (group shl 8 or cmd) {
                 0x0B18 -> { val lo = param(v, 0); val hi = param(v, 1); if (lo != null && hi != null && hi in 1..24) c = c.copy(rearGears = lo to hi) }
                 0x0A18 -> { val lo = param(v, 0); val hi = param(v, 1); if (lo != null && hi != null && hi in 1..4) c = c.copy(frontGears = lo to hi) }
-                0x0B00 -> param(v, 0)?.let { c = c.copy(shiftModeManual = it == 0) }
+                0x0B00 -> param(v, 0)?.let { c = c.copy(shiftMode = it) }
                 0x0B08 -> param(v, 0)?.let { if (it in 1..24) c = c.copy(currentRearGear = it) }
                 0x0A08 -> param(v, 0)?.let { if (it in 1..4) c = c.copy(currentFrontGear = it) }
                 0x2610 -> param(v, 0)?.let { if (it in 0..100) c = c.copy(batteryPercent = it) }

@@ -49,10 +49,13 @@ class EtubeTest {
         assertEquals(null, Etube.replyHasData(Etube.hex("100201")))
     }
 
-    @Test fun setShiftModeIsABleUnitCommand() {
-        // group 0x0B, command 0xF8, 1 = manual / 0 = synchronized, trailing 0
-        assertEquals("00 13 0b f8 01 00", Etube.setShiftMode(true).hex())
-        assertEquals("00 13 0b f8 00 00", Etube.setShiftMode(false).hex())
+    @Test fun storedShiftModeUsesTheLiveCodes() {
+        // capture 14: the same derailleur read in manual, then after two presses on its button in S2
+        assertEquals(0, Etube.parseConfig(listOf(Etube.hex("000b00000cffff00ffff"))).shiftMode)
+        assertEquals(ShiftMode.SYNCHRO_S2.code, Etube.parseConfig(listOf(Etube.hex("000b000600ffff00ffff"))).shiftMode)
+        // a config saved before 0.8 only knew manual or not
+        assertEquals(0, Etube.Config.fromJson(org.json.JSONObject("""{"manual":true}""")).shiftMode)
+        assertEquals(null, Etube.Config.fromJson(org.json.JSONObject("""{"manual":false}""")).shiftMode)
     }
 
     @Test fun parseConfigDecodesRealRecords() {
@@ -62,7 +65,7 @@ class EtubeTest {
         val c = Etube.parseConfig(recs)
         assertEquals(1 to 12, c.rearGears)
         assertEquals(1 to 2, c.frontGears)
-        assertEquals(true, c.shiftModeManual)
+        assertEquals(0, c.shiftMode)
         assertEquals(10, c.currentRearGear)
         assertEquals(100, c.batteryPercent)
         assertTrue(Etube.parseConfig(listOf(Etube.hex("000ab0ffffffff"))).isEmpty) // unprovisioned teeth → nothing
@@ -105,7 +108,7 @@ class EtubeTest {
         val read11 = Etube.parseConfig(listOf("000b18010cfffff7f86f", "000b00000cfffff7f86f", "00264064000000f7f86f").map { Etube.hex(it) })
         val kept = now.over(read11)
         assertEquals(1 to 12, kept.rearGears)
-        assertEquals(true, kept.shiftModeManual)
+        assertEquals(0, kept.shiftMode)
         assertEquals(90, kept.capacityPercent) // the newer reading wins where both have one
         assertEquals(kept, Etube.Config.fromJson(org.json.JSONObject(kept.toJson().toString())))
 

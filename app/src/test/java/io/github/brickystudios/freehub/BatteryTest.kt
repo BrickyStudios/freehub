@@ -5,6 +5,21 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class BatteryTest {
+    @Test fun photoShrinksToAboutSixteenHundredPixels() {
+        assertEquals(1, BikePhotos.sampleSize(1600))
+        assertEquals(2, BikePhotos.sampleSize(4000))  // 12 MP phone photo → 2000 px
+        assertEquals(4, BikePhotos.sampleSize(8000))  // 50 MP → 2000 px
+    }
+
+    @Test fun lowBatteryWarnsOncePerStep() {
+        assertNull(LowBattery.due(25, 0))
+        assertEquals(20, LowBattery.due(20, 0))
+        assertNull(LowBattery.due(15, 20))      // already warned at 20
+        assertEquals(10, LowBattery.due(9, 20))
+        assertNull(LowBattery.due(5, 10))
+        assertEquals(10, LowBattery.due(8, 0))  // first reading already low: the stricter step, once
+    }
+
     @Test fun shimanoFigureUntilEnoughIsKnown() {
         assertNull(Range.learned(emptyList()))
         // 3 % used: too coarse to learn from

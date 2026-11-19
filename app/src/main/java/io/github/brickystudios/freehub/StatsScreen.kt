@@ -75,7 +75,11 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, bike
             color = P.faint, size = 14.sp,
         )
         Spacer(Modifier.height(28.dp))
-        Label(tr("Letzte Fahrten", "Recent rides"))
+        // the number on the right of each ride needs naming once, not on every row
+        Row(Modifier.fillMaxWidth()) {
+            Label(tr("Letzte Fahrten", "Recent rides"), Modifier.weight(1f))
+            Label(tr("Schaltvorgänge", "Shifts"))
+        }
         Spacer(Modifier.height(6.dp))
         val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale()) }
         totals.rides.take(30).forEach { r ->

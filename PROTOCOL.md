@@ -170,7 +170,7 @@ After `00 03 00` the derailleur sends one notification per stored setting, unask
 | `0A·18` | front positions, min and max | `01 02` = 1–2 |
 | `0B·08` | current rear position | `0a` = 10 |
 | `0A·08` | current front position | `01` |
-| `0B·00` | shift mode, `0` = manual | |
+| `0B·00` | shift mode, same codes as byte 1 of `0x2AC1`: `0` manual, `5` S1, `6` S2 | read `00` in manual and `06` after two presses on the derailleur's button |
 | `0A·B0` | chainring pattern (table above) | `06 00` = 50/34 |
 | `0B·B0` | cassette pattern (table above) | `12 00` = 11–34 |
 | `0B·20` | rear fine-tune range, signed | `ee 12` = −18 … +18 |
@@ -188,7 +188,7 @@ E-TUBE's gear usage request is `00 13 33 04 00 01 01` (group `0x33`, command `0x
 
 ### Writes
 
-Freehub never writes on its own. One write exists in the developer options, as a test: `00 13 0b f8 <1 = manual, 0 = synchronized> 00` sets the shift mode. It has not been confirmed on a bike yet. The mode button on the bar switches back either way. Skipped on purpose: fine-tune, button mapping, teeth patterns, SHIMANO ID, the firmware service `0x18FE`, and the e-bike groups (`16`, `17`, `38`, `39`).
+Freehub never writes to the derailleur. A shift-mode write was tried and dropped: `00 13 0b f8 00 00` answers `33 0b fb`, the "no" reply (`0xF8 | 3`), and the mode does not change. E-TUBE never writes a mode in the snoop either. On 12-speed Di2 the rider switches modes at the bike: two presses on the button of the rear derailleur step manual → S1 → S2, and its LED shows the mode (blue for 2 s = manual, 2 blinks = S1, 3 blinks = S2). Skipped on purpose: fine-tune, button mapping, teeth patterns, SHIMANO ID, the firmware service `0x18FE`, and the e-bike groups (`16`, `17`, `38`, `39`).
 
 ## How this was worked out
 
