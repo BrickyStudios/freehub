@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -59,8 +60,8 @@ fun LiveScreen(bike: Bike, profile: Profile?, paired: Boolean, bikes: List<Profi
             needsPermission -> Welcome(onAllow, onDemo)
             bike.link == Link.NO_BLUETOOTH -> Hint(tr("Bluetooth ist aus", "Bluetooth is off"), tr("Freehub spricht per Bluetooth mit dem Schaltwerk.", "Freehub talks to the derailleur over Bluetooth."), tr("Einschalten", "Turn on"), onBluetooth, onDemo)
             !paired && !bike.demo -> {
-                Num(tr("Koppel dein Rad.", "Pair your bike."), 44.sp)
-                Spacer(Modifier.height(10.dp))
+                Num(tr("Koppel dein Rad", "Pair your bike"), 44.sp)
+                Spacer(Modifier.height(12.dp))
                 BodyText(
                     tr(
                         "Freehub verbindet sich nur mit Rädern, die du hier koppelst. So greift es nie ein fremdes Schaltwerk, auch nicht das vom gleichen Rad daneben.",
@@ -95,10 +96,11 @@ private fun BikeChips(bikes: List<Profile>, profile: Profile?) {
         bikes.forEach { b ->
             val on = b.address == profile?.address
             Box(
-                Modifier.background(if (on) P.accent.copy(alpha = 0.16f) else P.surface, Pill)
+                Modifier.heightIn(min = 48.dp).background(if (on) P.accent.copy(alpha = 0.16f) else P.surface, Pill)
                     .clickable(role = androidx.compose.ui.semantics.Role.Button) { Di2.switchTo(ctx, b.address) }
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-            ) { BodyText(b.name, color = if (on) P.accent else P.muted, weight = FontWeight.SemiBold, size = 15.sp) }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) { BodyText(b.name, color = if (on) P.accent else P.muted, weight = FontWeight.Medium, size = 15.sp) }
         }
     }
 }
@@ -115,7 +117,7 @@ private fun StatusLine(bike: Bike, profile: Profile?) {
     }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Dot(color)
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Label(text, Modifier.weight(1f), color = P.ink)
     }
 }
@@ -138,10 +140,10 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
     // and settles with a small detent like a pawl dropping in. The old number leaves faster than the new one arrives.
     Row(verticalAlignment = Alignment.CenterVertically) {
         GearNumber(front, g.front, still, P.ink)
-        BodyText("×", Modifier.padding(horizontal = 10.dp), color = P.faint, size = 48.sp)
+        BodyText("×", Modifier.padding(horizontal = 12.dp), color = P.faint, size = 48.sp)
         GearNumber(rear, g.rear, still, P.accent)
     }
-    Spacer(Modifier.height(14.dp))
+    Spacer(Modifier.height(12.dp))
     Label(
         tr("Vorne ${g.front ?: "–"}/${g.frontMax ?: "–"} · Hinten ${g.rear ?: "–"}/${g.rearMax ?: "–"}", "Front ${g.front ?: "–"}/${g.frontMax ?: "–"} · Rear ${g.rear ?: "–"}/${g.rearMax ?: "–"}"),
     )
@@ -168,14 +170,14 @@ private fun Cockpit(g: Gears, ride: RideNow?, wheelMm: Int, buttons: Instant.But
     Panel {
         Column {
             Label(tr("Diese Fahrt", "This ride"))
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(12.dp))
             val n = (ride?.rear ?: 0).toLong() + (ride?.front ?: 0)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Odometer(n, 56.sp)
-                Spacer(Modifier.width(10.dp))
-                BodyText(shiftsWord(n) + (ride?.meters?.takeIf { it > 0 }?.let { " · " + kmText(it) } ?: ""), color = P.muted, modifier = Modifier.padding(bottom = 8.dp))
+            Row {
+                Odometer(n, 56.sp, modifier = Modifier.alignByBaseline(), tight = true)
+                Spacer(Modifier.width(12.dp))
+                BodyText(shiftsWord(n) + (ride?.meters?.takeIf { it > 0 }?.let { " · " + kmText(it) } ?: ""), Modifier.alignByBaseline(), color = P.muted)
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Field(count((ride?.rear ?: 0).toLong()), tr("Hinten", "Rear"), Modifier.weight(1f), 26.sp)
                 Field(count((ride?.front ?: 0).toLong()), tr("Vorne", "Front"), Modifier.weight(1f), 26.sp)
@@ -261,10 +263,10 @@ private fun DFlyFlash(b: Instant.Buttons?) {
     ) {
         Column {
             Spacer(Modifier.height(12.dp))
-            Panel(pad = 14.dp) {
+            Panel(pad = 16.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Dot(P.accent)
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(8.dp))
                     BodyText(text, weight = FontWeight.Medium)
                 }
             }
@@ -276,7 +278,7 @@ private fun DFlyFlash(b: Instant.Buttons?) {
 private fun Welcome(onAllow: () -> Unit, onDemo: () -> Unit) {
     Ratchet(Modifier.size(72.dp))
     Spacer(Modifier.height(28.dp))
-    Num(tr("Dein Di2,\nauf einen Blick.", "Your Di2,\nat a glance."), 52.sp)
+    Num(tr("Dein Di2,\nauf einen Blick", "Your Di2,\nat a glance"), 52.sp)
     Spacer(Modifier.height(16.dp))
     BodyText(
         tr(
@@ -287,9 +289,9 @@ private fun Welcome(onAllow: () -> Unit, onDemo: () -> Unit) {
     )
     Spacer(Modifier.height(28.dp))
     Action(tr("Bluetooth erlauben", "Allow Bluetooth"), Modifier.fillMaxWidth(), onClick = onAllow)
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(12.dp))
     Action(tr("Erst die Demo ansehen", "See the demo first"), Modifier.fillMaxWidth(), primary = false, onClick = onDemo)
-    Spacer(Modifier.height(18.dp))
+    Spacer(Modifier.height(16.dp))
     BodyText(tr("Läuft mit 12-fach Di2 von Shimano (105, Ultegra, Dura-Ace, GRX).", "Works with Shimano 12-speed Di2 (105, Ultegra, Dura-Ace, GRX)."), color = P.faint, size = 14.sp)
 }
 
@@ -299,8 +301,8 @@ private fun Searching(onDemo: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.CenterStart) {
         Ratchet(Modifier.size(160.dp), coasting = true)
     }
-    Num(tr("Einmal schalten.", "Shift once."), 44.sp)
-    Spacer(Modifier.height(10.dp))
+    Num(tr("Einmal schalten", "Shift once"), 44.sp)
+    Spacer(Modifier.height(12.dp))
     BodyText(
         tr("Das Schaltwerk schläft, wenn das Rad steht. Ein Klick am Hebel weckt es, dann verbindet sich Freehub von selbst.", "The derailleur sleeps while the bike stands still. One click on a lever wakes it, then Freehub connects on its own."),
         color = P.muted, size = 17.sp,
@@ -312,12 +314,12 @@ private fun Searching(onDemo: () -> Unit) {
 @Composable
 private fun Hint(title: String, text: String, action: String?, onAction: () -> Unit, onDemo: (() -> Unit)?) {
     Num(title, 44.sp)
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(12.dp))
     BodyText(text, color = P.muted, size = 17.sp)
     Spacer(Modifier.height(24.dp))
     if (action != null) Action(action, Modifier.fillMaxWidth(), onClick = onAction)
     if (onDemo != null) {
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Action(tr("Demo ansehen", "See the demo"), Modifier.fillMaxWidth(), primary = false, onClick = onDemo)
     }
 }

@@ -54,7 +54,7 @@ fun PairList(onPaired: (Profile) -> Unit) {
         if (seen.isEmpty()) {
             Row(Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Ratchet(Modifier.size(36.dp), coasting = true)
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
                 BodyText(tr("Suche … Schalt einmal an deinem Rad, dann taucht sein Schaltwerk hier auf.", "Searching … Shift once on your bike, then its derailleur shows up here."), color = P.muted, size = 15.sp)
             }
         }
@@ -64,7 +64,7 @@ fun PairList(onPaired: (Profile) -> Unit) {
                 (model(n.name) ?: "Di2") + (unitNumber(n.name)?.let { " · $it" } ?: ""),
                 closeness(n.rssi) + if (paired) " · " + tr("schon gekoppelt", "already paired") else "",
                 onClick = if (paired) null else ({ onPaired(Garage.add(n.address, n.name)) }),
-            ) { if (!paired) BodyText(tr("Koppeln", "Pair"), color = P.accent, weight = FontWeight.SemiBold) }
+            ) { if (!paired) BodyText(tr("Koppeln", "Pair"), color = P.accent, weight = FontWeight.Medium) }
             Divider()
         }
         if (seen.size > 1) BodyText(
@@ -72,7 +72,7 @@ fun PairList(onPaired: (Profile) -> Unit) {
                 "Mehrere Schaltwerke in der Nähe. Das oberste ist am nächsten. Schalt an deinem Rad: sein Schaltwerk wacht auf und rückt nach oben.",
                 "Several derailleurs in range. The top one is the nearest. Shift on your bike: its derailleur wakes up and moves to the top.",
             ),
-            Modifier.padding(top = 10.dp), color = P.faint, size = 14.sp,
+            Modifier.padding(top = 12.dp), color = P.faint, size = 14.sp,
         )
     }
 }

@@ -65,7 +65,7 @@ fun Onboarding(
                     Step.WELCOME -> {
                         Ratchet(Modifier.size(72.dp))
                         Spacer(Modifier.height(28.dp))
-                        Title(tr("Dein Di2,\nauf einen Blick.", "Your Di2,\nat a glance."))
+                        Title(tr("Dein Di2,\nauf einen Blick", "Your Di2,\nat a glance"))
                         Text(tr(
                             "Gang, Akku, Reichweite, Kilometer und jeder Schaltvorgang, direkt vom Schaltwerk. In ein paar Schritten ist alles eingerichtet; jeder lässt sich überspringen.",
                             "Gear, battery, range, distance and every shift, straight from the derailleur. A few steps set everything up; each one can be skipped.",
@@ -86,7 +86,7 @@ fun Onboarding(
                         ))
                         PairList(onPaired)
                     } else {
-                        Title(if (bike.link == Link.CONNECTED) tr("Verbunden.", "Connected.") else tr("Einmal schalten.", "Shift once."))
+                        Title(if (bike.link == Link.CONNECTED) tr("Verbunden", "Connected") else tr("Einmal schalten", "Shift once"))
                         Text(
                             when (bike.link) {
                                 Link.CONNECTED -> (model(bike.name) ?: "Di2") + (bike.battery?.let { " · " + tr("Akku", "battery") + " $it %" } ?: "")
@@ -129,7 +129,7 @@ fun Onboarding(
                         ), warn = true)
                     }
                     Step.DONE -> {
-                        Title(tr("Fertig.", "Done."))
+                        Title(tr("Fertig", "Done"))
                         Text(tr("Alles lässt sich später unter Rad ändern, auch diese Einrichtung.", "Everything can be changed later under Bike, this setup too."))
                     }
                 }
@@ -158,7 +158,7 @@ fun Onboarding(
         val waiting = step == Step.CONNECT && bike.link != Link.CONNECTED && bike.link != Link.NO_BLUETOOTH
         Action(button.first, Modifier.fillMaxWidth(), primary = !waiting, onClick = button.second)
         if (step !in setOf(Step.WELCOME, Step.DONE) && !waiting) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Action(tr("Überspringen", "Skip"), Modifier.fillMaxWidth(), primary = false) { next() }
         }
     }

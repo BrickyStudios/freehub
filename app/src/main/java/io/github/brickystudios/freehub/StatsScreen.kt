@@ -42,7 +42,7 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, bike
 
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 20.dp)) {
         Label(tr("Seit Beginn", "All time") + (bikeName?.let { " · $it" } ?: ""))
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         Num(count(shifts), 88.sp, tight = true)
         Spacer(Modifier.height(12.dp))
         BodyText(
@@ -60,14 +60,14 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, bike
         }
         val fav = Usage.favourite(usage)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Field("%.0f".fmt(shifts / (ms / 3_600_000f).coerceAtLeast(0.01f)), tr("pro Stunde", "per hour"), Modifier.weight(1f))
+            Field("%.0f".fmt(shifts / (ms / 3_600_000f).coerceAtLeast(0.01f)), tr("Pro Stunde", "Per hour"), Modifier.weight(1f))
             val cross = Usage.crossShare(usage, frontMax, rearMax)
             Field("%.0f %%".fmt(cross * 100), tr("Schräglauf", "Cross-chain"), Modifier.weight(1f), color = if (cross > 0.1f) P.warn else P.ink)
             Field(fav?.let { gearName(it, gears) } ?: "–", tr("Lieblingsgang", "Favourite"), Modifier.weight(1f))
         }
         Spacer(Modifier.height(28.dp))
         Label(tr("Wo deine Zeit liegt", "Where your time goes"))
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Heatmap(usage, frontMax, rearMax, gears)
         Spacer(Modifier.height(8.dp))
         BodyText(
@@ -80,7 +80,7 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, bike
             Label(tr("Letzte Fahrten", "Recent rides"), Modifier.weight(1f))
             Label(tr("Schaltvorgänge", "Shifts"))
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale()) }
         totals.rides.take(30).forEach { r ->
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -97,8 +97,8 @@ fun StatsScreen(totals: Totals, ride: RideNow?, gears: Gears?, km: Double?, bike
         if (!confirm) Action(tr("Zähler zurücksetzen", "Reset counters"), Modifier.fillMaxWidth(), primary = false) { confirm = true }
         else {
             BodyText(tr("Alle Fahrten und Zähler löschen? Das lässt sich nicht rückgängig machen.", "Delete all rides and counters? This cannot be undone."), color = P.warn)
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Action(tr("Löschen", "Delete"), Modifier.weight(1f)) { confirm = false; onReset() }
                 Action(tr("Abbrechen", "Cancel"), Modifier.weight(1f), primary = false) { confirm = false }
             }

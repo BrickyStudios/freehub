@@ -8,14 +8,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -179,7 +176,6 @@ class MainActivity : ComponentActivity() {
         val backdrop = rememberLayerBackdrop()
         Box(Modifier.fillMaxSize().background(P.bg)) {
             Box(Modifier.fillMaxSize().layerBackdrop(backdrop)) {
-                Ambient()
                 HorizontalPager(pager, Modifier.fillMaxSize().statusBarsPadding(), beyondViewportPageCount = 1) { page ->
                     when (page) {
                         0 -> LiveScreen(
@@ -247,7 +243,7 @@ private fun NavBar(position: () -> Float, tab: Int, modifier: Modifier, onTab: (
     val items = listOf(tr("Live", "Live"), tr("Statistik", "Stats"), tr("Rad", "Bike"))
     BoxWithConstraints(modifier.fillMaxWidth().height(60.dp).glass()) {
         val third = maxWidth / items.size
-        Box(Modifier.offset { IntOffset((third * position()).roundToPx(), 0) }.width(third).fillMaxHeight().padding(5.dp).background(P.accent.copy(alpha = 0.16f), Pill))
+        Box(Modifier.offset { IntOffset((third * position()).roundToPx(), 0) }.width(third).fillMaxHeight().padding(4.dp).background(P.accent.copy(alpha = 0.16f), Pill))
         Row(Modifier.fillMaxSize()) {
             items.forEachIndexed { i, label ->
                 val on = i == tab
@@ -256,20 +252,9 @@ private fun NavBar(position: () -> Float, tab: Int, modifier: Modifier, onTab: (
                         .semantics { selected = on }
                         .clickable(remember { MutableInteractionSource() }, indication = null, role = Role.Tab) { onTab(i) },
                     contentAlignment = Alignment.Center,
-                ) { Label(label, color = if (on) P.accent else P.muted) }
+                ) { Label(label, color = if (on) P.ink else P.muted) }
             }
         }
-    }
-}
-
-/** A soft glow behind everything, so the glass has light to bend: top right, and low on the left under the tabs. */
-@Composable
-private fun Ambient() {
-    val a = P.accent
-    val dark = isSystemInDarkTheme()
-    Canvas(Modifier.fillMaxSize()) {
-        drawRect(Brush.radialGradient(listOf(a.copy(alpha = if (dark) 0.16f else 0.10f), Color.Transparent), Offset(size.width * 0.9f, 0f), size.width * 0.9f))
-        drawRect(Brush.radialGradient(listOf(a.copy(alpha = if (dark) 0.10f else 0.07f), Color.Transparent), Offset(0f, size.height), size.width))
     }
 }
 
@@ -277,7 +262,7 @@ private fun Ambient() {
 private fun UpdateBar(u: UpdateState, onInstall: () -> Unit, onLater: () -> Unit, modifier: Modifier) {
     Row(modifier.fillMaxWidth().glass(Card).padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            BodyText(tr("Version ${u.release.version} ist da", "Version ${u.release.version} is out"), weight = FontWeight.SemiBold, size = 15.sp)
+            BodyText(tr("Version ${u.release.version} ist da", "Version ${u.release.version} is out"), weight = FontWeight.Medium, size = 15.sp)
             val p = u.progress
             BodyText(
                 when {
@@ -290,7 +275,7 @@ private fun UpdateBar(u: UpdateState, onInstall: () -> Unit, onLater: () -> Unit
         }
         if (u.progress == null) {
             BodyText(tr("Später", "Later"), Modifier.clickable(onClick = onLater).padding(12.dp), color = P.muted, weight = FontWeight.Medium)
-            BodyText(tr("Installieren", "Install"), Modifier.clickable(onClick = onInstall).padding(12.dp), color = P.accent, weight = FontWeight.SemiBold)
+            BodyText(tr("Installieren", "Install"), Modifier.clickable(onClick = onInstall).padding(12.dp), color = P.accent, weight = FontWeight.Medium)
         }
     }
 }

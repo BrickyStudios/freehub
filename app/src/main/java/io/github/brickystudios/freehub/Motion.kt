@@ -86,8 +86,8 @@ fun Ratchet(modifier: Modifier, coasting: Boolean = false, ring: Color = P.ink, 
 
 /** A counter that rolls like an odometer, one step up per increase. Fixed-width digits so nothing jumps. */
 @Composable
-fun Odometer(value: Long, size: TextUnit, color: Color = P.ink, modifier: Modifier = Modifier) {
-    if (reducedMotion()) return Num(count(value), size, modifier, color)
+fun Odometer(value: Long, size: TextUnit, color: Color = P.ink, modifier: Modifier = Modifier, tight: Boolean = false) {
+    if (reducedMotion()) return Num(count(value), size, modifier, color, tight = tight)
     AnimatedContent(
         targetState = value,
         transitionSpec = {
@@ -96,7 +96,7 @@ fun Odometer(value: Long, size: TextUnit, color: Color = P.ink, modifier: Modifi
         },
         label = "odometer",
         modifier = modifier,
-    ) { Num(count(it), size, color = color) }
+    ) { Num(count(it), size, color = color, tight = tight) }
 }
 
 /** Buttons give way a little under the finger: 0.97, quick. */

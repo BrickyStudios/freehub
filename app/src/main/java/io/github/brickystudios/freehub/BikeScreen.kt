@@ -93,7 +93,7 @@ fun BikeScreen(
         Info(tr("Seriennummer", "Serial number"), bike.serial ?: "–")
         if (profile != null || bike.demo) DrivetrainPicker(bike, gears) // per bike: nothing to save it to before pairing
         SettingRow(tr("Schaltmodus", "Shift mode"), modeHow(gears?.mode)) {
-            BodyText(gears?.let { modeName(it.mode) } ?: "–", weight = FontWeight.SemiBold)
+            BodyText(gears?.let { modeName(it.mode) } ?: "–", weight = FontWeight.Medium)
         }
         Divider()
         gears?.multiShiftInterval?.let { Info(tr("Multi-Shift-Intervall", "Multi-shift interval"), it.toString()) }
@@ -105,7 +105,7 @@ fun BikeScreen(
         if (raw != null && !bike.demo) {
             val clip = LocalClipboardManager.current
             SettingRow(tr("Rohdaten vom Schaltwerk", "Raw data from the derailleur"), raw, onClick = { clip.setText(AnnotatedString(raw)) }) {
-                BodyText(tr("Kopieren", "Copy"), color = P.accent, weight = FontWeight.SemiBold)
+                BodyText(tr("Kopieren", "Copy"), color = P.accent, weight = FontWeight.Medium)
             }
             Divider()
         }
@@ -129,7 +129,7 @@ fun BikeScreen(
             BodyText(
                 if (b == null) tr("Drück eine Zusatztaste oben am Griff. Hier steht dann, welcher D-Fly-Kanal ankommt.", "Press an extra button on top of the hood. The D-Fly channel shows up here.")
                 else b.channels.entries.joinToString("\n") { (ch, p) -> "D-FLY $ch · ${pressName(p)}" },
-                color = if (b == null) P.muted else P.ink, weight = if (b == null) FontWeight.Normal else FontWeight.SemiBold,
+                color = if (b == null) P.muted else P.ink, weight = if (b == null) FontWeight.Normal else FontWeight.Medium,
             )
         }
 
@@ -156,7 +156,7 @@ fun BikeScreen(
             Lang.chosen = lang
             (ctx as? Activity)?.recreate()
         }) {
-            BodyText(when (lang) { "de" -> "Deutsch"; "en" -> "English"; else -> tr("wie das Handy", "phone default") }, weight = FontWeight.SemiBold)
+            BodyText(when (lang) { "de" -> "Deutsch"; "en" -> "English"; else -> tr("wie das Handy", "phone default") }, weight = FontWeight.Medium)
         }
         Divider()
         var haptics by remember { mutableStateOf(Prefs.haptics(ctx)) }
@@ -234,7 +234,7 @@ private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
                 ).joinToString(" · ")
                 BodyText(
                     if (teeth.isEmpty()) tr("Keine Zähne gespeichert", "No teeth stored") else teeth,
-                    weight = FontWeight.SemiBold,
+                    weight = FontWeight.Medium,
                 )
                 BodyText(
                     if (teeth.isEmpty()) tr(
@@ -245,12 +245,12 @@ private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
                 )
                 // a derailleur set up in E-TUBE knows its teeth: take them over instead of picking them by hand
                 val takeable = !bike.demo && ((cfg.ringPattern != null && cfg.ringPattern != Prefs.rings(ctx)) || (cfg.cogPattern != null && cfg.cogPattern != Prefs.cogs(ctx)))
-                if (takeable) Action(tr("Zähne übernehmen", "Use these teeth"), Modifier.padding(top = 10.dp), primary = false) {
+                if (takeable) Action(tr("Zähne übernehmen", "Use these teeth"), Modifier.padding(top = 12.dp), primary = false) {
                     cfg.ringPattern?.let { Prefs.setRings(ctx, it) }
                     cfg.cogPattern?.let { Prefs.setCogs(ctx, it) }
                     Di2.repick()
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 val rest = listOfNotNull(
                     cfg.rearGears?.let { "${cfg.frontGears?.second ?: "?"} × ${it.second}" },
                     cfg.shiftMode?.let { modeName(ShiftMode.of(it)) },
@@ -261,7 +261,7 @@ private fun Stored(bike: Bike, profile: Profile?, when_: DateFormat) {
                 BodyText(rest, color = P.muted, size = 14.sp)
             }
             if (bike.demo) return@Column
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Action(
                 if (cfg == null) tr("Schaltwerk auslesen", "Read the derailleur") else tr("Neu auslesen", "Read again"),
                 Modifier.fillMaxWidth(), primary = connected && cfg == null,
@@ -303,7 +303,7 @@ private fun ShiftQuality(h: Shifting.Health) {
                 Field("%.0f %%".fmt(h.share * 100), tr("sprangen zurück", "sprang back"), Modifier.weight(1f), color = if (h.worthALook) P.warn else P.ink)
                 Field(count(h.takenBack), tr("von ${count(h.rearShifts)} hinten", "of ${count(h.rearShifts)} rear"), Modifier.weight(1f))
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             BodyText(
                 if (h.clean) tr(
                     "Die Schaltung greift sauber. Freehub merkt es, wenn ein Gang sofort zurückspringt.",
@@ -343,13 +343,13 @@ internal fun DrivetrainPicker(bike: Bike, gears: Gears?) {
         rings = ringChoices[(ringChoices.indexOf(rings) + 1) % ringChoices.size]
         Prefs.setRings(ctx, rings)
         Di2.repick()
-    }) { BodyText((Teeth.chainrings(rings) ?: reported?.chainrings)?.joinToString("/") ?: tr("unbekannt", "unknown"), weight = FontWeight.SemiBold) }
+    }) { BodyText((Teeth.chainrings(rings) ?: reported?.chainrings)?.joinToString("/") ?: tr("unbekannt", "unknown"), weight = FontWeight.Medium) }
     Divider()
     SettingRow(tr("Kassette", "Cassette"), note(cogs >= 0, reported?.sprockets != null), onClick = {
         cogs = cogChoices[(cogChoices.indexOf(cogs) + 1) % cogChoices.size]
         Prefs.setCogs(ctx, cogs)
         Di2.repick()
-    }) { BodyText((Teeth.sprockets(cogs) ?: reported?.sprockets)?.let(::cassette) ?: tr("unbekannt", "unknown"), weight = FontWeight.SemiBold) }
+    }) { BodyText((Teeth.sprockets(cogs) ?: reported?.sprockets)?.let(::cassette) ?: tr("unbekannt", "unknown"), weight = FontWeight.Medium) }
     Divider()
 }
 
@@ -385,7 +385,7 @@ private fun GarageSection(bike: Bike, profile: Profile?, bikes: List<Profile>, o
         if (!confirm) Action(tr("Dieses Rad entfernen", "Remove this bike"), Modifier.padding(top = 8.dp), primary = false) { confirm = true }
         else {
             BodyText(tr("${profile.name} und alle seine Fahrten löschen?", "Delete ${profile.name} and all its rides?"), Modifier.padding(top = 8.dp), color = P.warn)
-            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Action(tr("Löschen", "Delete"), Modifier.weight(1f)) { confirm = false; onRemove(profile) }
                 Action(tr("Abbrechen", "Cancel"), Modifier.weight(1f), primary = false) { confirm = false }
             }
@@ -413,7 +413,7 @@ internal fun BikeState(b: Profile, chosen: Boolean, bike: Bike) {
         chosen -> tr("gewählt · wird gesucht", "chosen · looking") to P.muted
         else -> return
     }
-    BodyText(text, color = color, weight = FontWeight.SemiBold, size = 14.sp)
+    BodyText(text, color = color, weight = FontWeight.Medium, size = 14.sp)
 }
 
 /** Developer options: share the capture, read every value. */
@@ -425,17 +425,17 @@ private fun Developer(bike: Bike) {
     Panel(Modifier.padding(bottom = 12.dp)) {
         Column {
             Label(tr("Mitschnitt", "Capture"))
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             BodyText(
                 tr("$lines Zeilen. Enthält die Seriennummer deines Schaltwerks: nur privat verschicken.", "$lines lines. Contains your derailleur's serial number: only send it privately."),
                 color = P.muted, size = 14.sp,
             )
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Action(tr("Teilen", "Share"), Modifier.weight(1f)) { shareCapture(ctx) }
                 Action(tr("Leeren", "Clear"), Modifier.weight(1f), primary = false) { DevLog.clear() }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Action(tr("Alle Werte lesen", "Read all values"), Modifier.fillMaxWidth(), primary = false) { if (connected) Di2.readAll() }
         }
     }
@@ -491,15 +491,15 @@ internal fun TyreRow() {
             wheel = WHEELS[(i + 1) % WHEELS.size].second
             Prefs.setWheel(ctx, wheel)
         },
-    ) { BodyText(WHEELS.firstOrNull { it.second == wheel }?.first ?: "$wheel mm", weight = FontWeight.SemiBold) }
+    ) { BodyText(WHEELS.firstOrNull { it.second == wheel }?.first ?: "$wheel mm", weight = FontWeight.Medium) }
     Divider()
 }
 
 @Composable
 private fun Info(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         BodyText(label, Modifier.weight(1f), color = P.muted)
-        BodyText(value, weight = FontWeight.SemiBold)
+        BodyText(value, weight = FontWeight.Medium)
     }
     Divider()
 }

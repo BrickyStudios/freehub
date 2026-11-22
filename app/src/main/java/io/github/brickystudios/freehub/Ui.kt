@@ -94,7 +94,7 @@ data class Palette(
 val Carbon = Palette(
     bg = Color(0xFF0D0E10), surface = Color(0xFF16181B), raised = Color(0xFF1F2226), line = Color(0xFF2B2F34),
     track = Color(0xFF262A2F),
-    ink = Color(0xFFF3F2EE), muted = Color(0xFFA0A4AA), faint = Color(0xFF62676E),
+    ink = Color(0xFFF3F2EE), muted = Color(0xFFA0A4AA), faint = Color(0xFF80858C),
     accent = Color(0xFFFF4D94), onAccent = Color(0xFF1A0710), warn = Color(0xFFFF9F43),
     glass = Color(0xA61F2226),
 )
@@ -102,12 +102,15 @@ val Carbon = Palette(
 val Paper = Palette(
     bg = Color(0xFFF3F2EE), surface = Color(0xFFFFFFFF), raised = Color(0xFFE9E7E1), line = Color(0xFFD9D6CE),
     track = Color(0xFFD6D3CB),
-    ink = Color(0xFF121316), muted = Color(0xFF575B62), faint = Color(0xFF8E9298),
-    accent = Color(0xFFD81B6A), onAccent = Color(0xFFFFFFFF), warn = Color(0xFFB4410B),
+    ink = Color(0xFF121316), muted = Color(0xFF575B62), faint = Color(0xFF696D73),
+    accent = Color(0xFFD01866), onAccent = Color(0xFFFFFFFF), warn = Color(0xFFB4410B),
     glass = Color(0xB8FFFFFF),
 )
 
 val LocalPalette = staticCompositionLocalOf { Carbon }
+
+/** tabular figures: a changing number keeps its width, and columns of numbers line up */
+const val TNUM = "tnum"
 val P: Palette @Composable get() = LocalPalette.current
 
 val Numerals = FontFamily(
@@ -117,7 +120,6 @@ val Numerals = FontFamily(
 val Body = FontFamily(
     Font(R.font.sairasemicondensed_regular, FontWeight.Normal),
     Font(R.font.sairasemicondensed_medium, FontWeight.Medium),
-    Font(R.font.sairasemicondensed_semibold, FontWeight.SemiBold),
 )
 
 @Composable
@@ -157,24 +159,24 @@ fun Modifier.glass(shape: Shape = Pill): Modifier {
 @Composable
 fun TabBarRoom() = Spacer(Modifier.navigationBarsPadding().height(96.dp))
 
-/** Small caps-style label above a value. */
+/** Small label above or under a value, in sentence case. */
 @Composable
 fun Label(text: String, modifier: Modifier = Modifier, color: Color = P.muted) = Text(
-    text.uppercase(), modifier,
-    style = TextStyle(fontFamily = Body, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, letterSpacing = 0.09.em, color = color),
+    text, modifier,
+    style = TextStyle(fontFamily = Body, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 18.sp, color = color, fontFeatureSettings = TNUM),
 )
 
 @Composable
 fun BodyText(text: String, modifier: Modifier = Modifier, color: Color = P.ink, size: TextUnit = 16.sp, weight: FontWeight = FontWeight.Normal, align: TextAlign? = null) = Text(
     text, modifier,
-    style = TextStyle(fontFamily = Body, fontWeight = weight, fontSize = size, lineHeight = size * 1.35f, color = color, textAlign = align ?: TextAlign.Unspecified),
+    style = TextStyle(fontFamily = Body, fontWeight = weight, fontSize = size, lineHeight = size * 1.35f, color = color, textAlign = align ?: TextAlign.Unspecified, fontFeatureSettings = TNUM),
 )
 
 /** The big type. [tight] is for a number on a line of its own: see [capBox]. */
 @Composable
 fun Num(text: String, size: TextUnit, modifier: Modifier = Modifier, color: Color = P.ink, weight: FontWeight = FontWeight.ExtraBold, tight: Boolean = false) = Text(
     text, if (tight) modifier.capBox(size) else modifier,
-    style = TextStyle(fontFamily = Numerals, fontWeight = weight, fontSize = size, lineHeight = size * 0.95f, color = color, letterSpacing = (-0.01).em),
+    style = TextStyle(fontFamily = Numerals, fontWeight = weight, fontSize = size, lineHeight = size * 0.95f, color = color, letterSpacing = (-0.01).em, fontFeatureSettings = TNUM),
 )
 
 /**
@@ -198,13 +200,13 @@ fun Modifier.capBox(size: TextUnit) = layout { m, c ->
 fun Field(value: String, label: String, modifier: Modifier = Modifier, size: TextUnit = 34.sp, color: Color = P.ink) {
     Column(modifier) {
         Num(value, size, color = color, weight = FontWeight.Bold, tight = true)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Label(label)
     }
 }
 
 @Composable
-fun Panel(modifier: Modifier = Modifier, pad: Dp = 18.dp, content: @Composable () -> Unit) {
+fun Panel(modifier: Modifier = Modifier, pad: Dp = 20.dp, content: @Composable () -> Unit) {
     Box(modifier.fillMaxWidth().background(P.surface, Card).padding(pad)) { content() }
 }
 
@@ -220,12 +222,12 @@ fun Action(text: String, modifier: Modifier = Modifier, primary: Boolean = true,
             .pressable(source)
             .background(if (primary) P.accent else P.raised, Pill)
             .clickable(source, indication = null, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text.uppercase(),
-            style = TextStyle(fontFamily = Body, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, letterSpacing = 0.1.em, color = if (primary) P.onAccent else P.ink),
+            text,
+            style = TextStyle(fontFamily = Body, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = if (primary) P.onAccent else P.ink),
         )
     }
 }
@@ -239,7 +241,7 @@ fun SettingRow(title: String, note: String? = null, onClick: (() -> Unit)? = nul
     Row(
         Modifier.fillMaxWidth().heightIn(min = 56.dp)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 10.dp),
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -254,9 +256,9 @@ fun SettingRow(title: String, note: String? = null, onClick: (() -> Unit)? = nul
 /** A one-line text field in the app's style: label above, a framed slab like a [Panel]. */
 @Composable
 fun Input(value: String, onChange: (String) -> Unit, label: String, secret: Boolean = false, digits: Boolean = false) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Label(label)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         BasicTextField(
             value, onChange,
             singleLine = true,
@@ -265,8 +267,8 @@ fun Input(value: String, onChange: (String) -> Unit, label: String, secret: Bool
             visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = if (secret) KeyboardType.Password else if (digits) KeyboardType.Number else KeyboardType.Text),
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
-                .background(P.surface, RoundedCornerShape(6.dp)).border(1.dp, P.line, RoundedCornerShape(6.dp))
-                .padding(horizontal = 14.dp, vertical = 15.dp),
+                .background(P.surface, RoundedCornerShape(10.dp)).border(1.dp, P.line, RoundedCornerShape(10.dp))
+                .padding(horizontal = 16.dp, vertical = 16.dp),
         )
     }
 }

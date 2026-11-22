@@ -106,11 +106,11 @@ fun FirmwareUpdate(bike: Bike, name: String?) {
         tr("Firmware ${check.latest.version} ist da", "Firmware ${check.latest.version} is out"),
         tr("Du hast ${bike.firmware}. Was neu ist und wie du es aufspielst", "You have ${bike.firmware}. What's new and how to install it"),
         onClick = { open = !open },
-    ) { BodyText(if (open) tr("Zu", "Close") else tr("Ansehen", "Show"), color = P.accent, weight = FontWeight.SemiBold) }
+    ) { BodyText(if (open) tr("Zu", "Close") else tr("Ansehen", "Show"), color = P.accent, weight = FontWeight.Medium) }
     if (open) Column(Modifier.padding(bottom = 16.dp)) {
         check.news.forEach { r ->
-            Row(Modifier.padding(top = 10.dp)) {
-                BodyText(r.version, Modifier.width(56.dp), weight = FontWeight.SemiBold, size = 14.sp)
+            Row(Modifier.padding(top = 12.dp)) {
+                BodyText(r.version, Modifier.width(56.dp), weight = FontWeight.Medium, size = 14.sp)
                 Column(Modifier.weight(1f)) {
                     BodyText(tr(r.de, r.en), size = 14.sp)
                     BodyText(Firmware.month(r.month), color = P.faint, size = 13.sp)
@@ -122,20 +122,20 @@ fun FirmwareUpdate(bike: Bike, name: String?) {
                 "Shimano sagt: Damit alles richtig läuft, brauchen Schaltwerk und Hebel beide das Update. Die Hebel gehen nicht per Funk, nur per Kabel vom Hebel ans Schaltwerk oder beim Händler.",
                 "Shimano says both derailleur and levers need the update for everything to work. The levers can't be updated over the air, only by cable from lever to derailleur or at a shop.",
             ),
-            Modifier.padding(top = 14.dp), color = P.warn, size = 14.sp,
+            Modifier.padding(top = 16.dp), color = P.warn, size = 14.sp,
         )
         BodyText(
             tr(
                 "Aufspielen kann nur Shimanos App E-TUBE PROJECT Cyclist. Damit sie das Schaltwerk für sich hat, lässt Freehub es 30 Minuten in Ruhe.",
                 "Only Shimano's E-TUBE PROJECT Cyclist app can install it. So it has the derailleur to itself, Freehub leaves it alone for 30 minutes.",
             ),
-            Modifier.padding(top = 14.dp), color = P.muted, size = 14.sp,
+            Modifier.padding(top = 16.dp), color = P.muted, size = 14.sp,
         )
-        if (!bike.demo) Action(tr("In E-TUBE aufspielen", "Install in E-TUBE"), Modifier.fillMaxWidth().padding(top = 14.dp)) {
+        if (!bike.demo) Action(tr("In E-TUBE aufspielen", "Install in E-TUBE"), Modifier.fillMaxWidth().padding(top = 16.dp)) {
             Di2.pause(ctx, Firmware.PAUSE_MS)
             Firmware.openEtube(ctx)
         }
-        BodyText(tr("Shimanos Liste, Stand ", "Shimano's list as of ") + Firmware.month(Firmware.CHECKED), Modifier.padding(top = 10.dp), color = P.faint, size = 13.sp)
+        BodyText(tr("Shimanos Liste, Stand ", "Shimano's list as of ") + Firmware.month(Firmware.CHECKED), Modifier.padding(top = 12.dp), color = P.faint, size = 13.sp)
     }
     Divider()
 }
